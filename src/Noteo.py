@@ -6,6 +6,11 @@
 import time
 import logging
 from threading import Timer
+import os
+import sys
+
+from configobj import ConfigObj
+from validate import Validator
 
 class NoteoConfig:
 	def __init__(self, filename, configspec):
@@ -28,7 +33,7 @@ class Event(object):
 	def handle(self):
 		pass
 
-	def handled(self, event, handler=None):
+	def handled(self, handler=None):
 		pass
 
 	def get_summary(self):
@@ -69,10 +74,13 @@ class FunctionCallEvent(Event):
 		super(FunctionCallEvent, self).__init__(noteo, due_in)
 
 	def handle(self):
+		return_value = None
 		if callable(self.function):
-			return self.function(*self.args, **self.kwargs)
+			return_value = self.function(*self.args, **self.kwargs)
 		else:
 			self.noteo.logger.warning("Function was not callable")
+		self.handled()
+		return return_value
 
 
 class NotificationEvent(Event):
@@ -85,11 +93,43 @@ class NotificationEvent(Event):
 	def handle(self):
 		self.noteo.send_to_modules(self)
 
+class RecurringEvent(Event):
+	def __init__(self, noteo, recurring_event, interval):
+		self.event = recurring_event
+		self.event_handled = self.event.handled
+		self.event.handled = self.handled
+		self.interval = interval
+		super(RecurringEvent, self).__init__(noteo, 0)
+	
+	def handle(self):
+		self.noteo.logger.info("adding recurring event to queue")
+		self.event.time = time.time() + self.interval
+		self.noteo.add_event_to_queue(self.event)
+
+	def handled(self, handlers=None):
+		self.handle()
 
 class NoteoModule(object):
-	def __init__(self, noteo):
+	'''NoteoModule is used to provide most of noteo's functionality
+	This should not be used by itself, but used as a super class'''
+	config_spec = {}
+	def __init__(self, noteo, path=""):
 		self.noteo = noteo
+		self.modulename = self.__class__.__name__
+		self.path = path
+		self.configure()
+		self.init()
 
+	def init(self):
+		'''init()
+		You should overload this instead of providing an __init__ function
+		By the time init() is called, everything should work properly.'''
+		pass
+
+	def configure(self):
+		config_path = os.path.join(self.noteo.config_dir, self.__class__.__name__)
+		self.config = NoteoConfig(config_path, self.config_spec)
+		
 	def handle_event(self, event):
 		self.noteo.logger.info("Handling event %s" % event)
 		return_val = self.do_handle_event(event)
@@ -97,29 +137,82 @@ class NoteoModule(object):
 		return return_val
 
 	def do_handle_event(self, event):
+		'''do_handle_event(event)
+		overload this when you want to do something with the event,
+		but the event is handled straight away - you will usually want to
+		do this. Overload handle_event when you want more control'''
 		pass
-
+	
+	def event_is_invalid(self, event):
+		'''event_is_invalid(event)
+		this is called when an event is made invalid before it is due to be
+		called. If the event doesn't exist, then this should gracefully do 
+		nothing'''
+		pass
 
 class Noteo:
 	logger = logging
+	#event loop stuff
 	event_loop_running = False
 	event_timer = None
+	#module, paths, etc
+	local_module_dir = os.path.expandvars('$HOME/.noteo')
+	module_dir = '/usr/share/noteo/'
+	config_dir = os.path.expandvars('$HOME/.config/noteo')
 	def __init__(self):
 		self.logger.basicConfig(level=logging.DEBUG)
 		self._event_queue = []
 		self._handled_events = {}
 		self._modules = []
+		self._configure()
+		self._load_modules()
 	
+	#configuration
+	def _configure(self):
+		try:
+			os.makedirs(Noteo.config_dir)
+		except:
+			self.logger.debug("Noteo configuration directory already exists")
+		config_spec = {
+			'localmodules': 'list(default=list(\'Test\'))',
+			'modules': 'list(default=list(\'RemoteTest\'))',
+			}
+		config_path = os.path.join(Noteo.config_dir, 'Noteo')
+		self.config = NoteoConfig(config_path, config_spec)
+
+	#modules
+	def _load_modules(self):
+		for module_name in self.config['modules']:
+			self._load_module(module_name, local=False)
+		for module_name in self.config['localmodules']:
+			self._load_module(module_name, local=True)
+	
+	def _load_module(self, module_name, local=False):
+		if local:
+			path = os.path.join(Noteo.local_module_dir, module_name)
+		else:
+			path = os.path.join(Noteo.module_dir, module_name)
+		sys.path.append(path)
+		try:
+			module = __import__(module_name).module(self, path)
+			self._modules.append(module)
+		except:
+			self.logger.error("An error occured when importing the module %s"
+					  % module_name)
+		finally:
+			sys.path.pop()
+
+	#events
 	def add_event_to_queue(self, event):
 		self._event_queue.append(event)
-		
+		self.event_loop()
 	
 	def event_handled(self, event=None):
 		self.logger.info("Event(%s) handled" % event)
 		if event in self._handled_events:
 			self._handled_events[event][1] -= 1
 			if self._handled_events[event][1] <= 0:
-				self._handled_events[event][0](event)
+				self._handled_events[event][0]()
 				del self._handled_events[event][0]
 		else:
 			self.logger.error("Event was not in _handled_events")
@@ -133,6 +226,10 @@ class Noteo:
 		for module in self._modules:
 			self._handled_events[event][1] += 1
 			module.handle_event(event)
+			
+	def invalidate_to_modules(self, event):
+		for module in self._modules:
+			module.event_is_invalid(event)
 	
 	def handle_event(self, event):
 		if time.time() >= event.time:
@@ -163,7 +260,9 @@ class Noteo:
 			self.event_timer = Timer(wait_time, self.event_loop)
 			self.event_timer.start()
 			self.logger.debug("Started a timer with delay of %s" % wait_time)
+			self.event_loop_running = False
 		else:
 			self.logger.debug("No events to handle. \
 Exiting event_loop")
+			self.event_loop_running = False
 		
