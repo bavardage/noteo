@@ -1,2 +1,3 @@
- - add ordering to events
+// - add ordering to events
  - do proper logging support
+ - pass handlers to events done with event_handled
