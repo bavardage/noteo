@@ -112,8 +112,7 @@ class Noteo:
 	
 	def add_event_to_queue(self, event):
 		self._event_queue.append(event)
-		#self._event_queue.sort()
-		self.event_loop()
+		
 	
 	def event_handled(self, event=None):
 		self.logger.info("Event(%s) handled" % event)
@@ -145,27 +144,26 @@ class Noteo:
 			self.logger.debug("Event not yet due. Procrastinating")
 	
 	def event_loop(self):
-		if self.event_timer:
+		eq = self._event_queue
+		self.logger.debug("Entering event_loop")
+		if self.event_loop_running:
+			return
+		self.event_loop_running = True
+		if self.event_timer is not None:
+			#if there is currently a timer going, kill it!
 			self.event_timer.cancel()
 			self.event_timer = None
-		if not self.event_loop_running:
-			self.logger.debug("HANDLING EVENTS")
-			self.event_loop_running = True
-			for event in self._event_queue:
-				self.handle_event(event)
-				self._event_queue.sort()
-				if not len(self._event_queue):
-					self.event_loop_running = False
-					return
-				else:
-					self.logger.info("All pending events handled, sleeping")
-					self.logger.info("The event queue now has size %s" %
-							 len(self._event_queue))
-					sleeptime = self._event_queue[0].time - time.time()
-					self.logger.debug("sleeping for %s" % sleeptime)
-					if sleeptime > 0:
-						self.event_loop_running = False
-						if self.event_timer:
-							self.event_timer.cancel()
-						self.event_timer = Timer(sleeptime, self.event_loop)
-						self.event_timer.start()
+		for e in eq:
+			self.handle_event(e)
+		eq.sort()
+		if len(eq):
+			wait_time = eq[0].time - time.time()
+			if wait_time <= 0:
+				wait_time = 0
+			self.event_timer = Timer(wait_time, self.event_loop)
+			self.event_timer.start()
+			self.logger.debug("Started a timer with delay of %s" % wait_time)
+		else:
+			self.logger.debug("No events to handle. \
+Exiting event_loop")
+		
