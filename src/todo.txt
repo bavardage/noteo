@@ -1,3 +1,17 @@
 // - add ordering to events
  - do proper logging support
  - pass handlers to events done with event_handled
+ - add some way of calling back a return value from events
+ 
+AWESOME
+ - escape command string
+ - work out a way of identifying different event types, so that I can detect a subclass
+    of notification event as a notification event
+
+
+ICONS
+ - allow both a gtk name and path to be passed, return only ever paths
+
+THINGS PASSED
+ - when an event should be ended prematurely, then is it valid to 
+ call handled? NO IT IS NOT IMO 

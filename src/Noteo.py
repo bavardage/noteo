@@ -8,6 +8,7 @@ import logging
 from threading import Timer
 import os
 import sys
+import gtk
 
 from configobj import ConfigObj
 from validate import Validator
@@ -36,17 +37,8 @@ class Event(object):
 	def handled(self, handler=None):
 		pass
 
-	def get_summary(self):
-		pass
-
-	def get_content(self):
-		pass
-
 	def should_handle(self):
 		return True
-
-	def get_icon(self):
-		pass
 	
 	#comparison
 	def __lt__(self, other):
@@ -84,14 +76,30 @@ class FunctionCallEvent(Event):
 
 
 class NotificationEvent(Event):
-	def __init__(self, noteo, due_in, summary, content, icon):
+	def __init__(self, noteo, due_in, summary, content, icon="", timeout=-1):
 		self.summary = summary
 		self.content = content
 		self.icon = icon
+		self.timeout = timeout
 		super(NotificationEvent, self).__init__(noteo, due_in)
 	
 	def handle(self):
 		self.noteo.send_to_modules(self)
+
+	def __repr__(self):
+		return '"%s" "%s" "%s"' % (self.summary, self.content, self.icon)
+
+	def get_summary(self):
+		return str(self.summary)
+	
+	def get_content(self):
+		return str(self.content)
+
+	def get_icon(self):
+		return "" #TODO: THIS
+
+	def get_timeout(self):
+		return self.timeout
 
 class RecurringEvent(Event):
 	def __init__(self, noteo, recurring_event, interval):
@@ -102,12 +110,29 @@ class RecurringEvent(Event):
 		super(RecurringEvent, self).__init__(noteo, 0)
 	
 	def handle(self):
-		self.noteo.logger.info("adding recurring event to queue")
+		self.noteo.logger.debug("adding recurring event to queue")
 		self.event.time = time.time() + self.interval
 		self.noteo.add_event_to_queue(self.event)
 
 	def handled(self, handlers=None):
+		self.event_handled()
 		self.handle()
+
+class RecurringFunctionCallEvent(Event):
+	def __init__(self, noteo, function, interval):
+		self.function = function
+		self.interval = interval
+		super(RecurringFunctionCallEvent, self).__init__(noteo, interval)
+
+	def handle(self):
+		self.noteo.logger.debug("Calling recurring function")
+		return_value = None
+		if callable(self.function):
+			return_value = self.function()
+		if return_value:
+			self.time = time.time() + self.interval
+			self.noteo.add_event_to_queue(self)
+		return return_value
 
 class NoteoModule(object):
 	'''NoteoModule is used to provide most of noteo's functionality
@@ -116,6 +141,7 @@ class NoteoModule(object):
 	def __init__(self, noteo, path=""):
 		self.noteo = noteo
 		self.modulename = self.__class__.__name__
+		self.noteo.logger.info("Initialising module %s" % self.modulename)
 		self.path = path
 		self.configure()
 		self.init()
@@ -163,6 +189,7 @@ class Noteo:
 		self.logger.basicConfig(level=logging.DEBUG)
 		self._event_queue = []
 		self._handled_events = {}
+		self._to_add_to_queue = []
 		self._modules = []
 		self._configure()
 		self._load_modules()
@@ -182,6 +209,7 @@ class Noteo:
 
 	#modules
 	def _load_modules(self):
+		self.logger.info("Loading modules")
 		for module_name in self.config['modules']:
 			self._load_module(module_name, local=False)
 		for module_name in self.config['localmodules']:
@@ -197,8 +225,9 @@ class Noteo:
 			module = __import__(module_name).module(self, path)
 			self._modules.append(module)
 		except:
-			self.logger.error("An error occured when importing the module %s"
+			self.logger.error("Errors occured when importing the module %s"
 					  % module_name)
+			self.logger.error("The error were: %s" % str(sys.exc_info()))
 		finally:
 			sys.path.pop()
 
@@ -206,6 +235,7 @@ class Noteo:
 	def add_event_to_queue(self, event):
 		self._event_queue.append(event)
 		self.event_loop()
+		self.gtk_update()
 	
 	def event_handled(self, event=None):
 		self.logger.info("Event(%s) handled" % event)
@@ -216,27 +246,29 @@ class Noteo:
 				del self._handled_events[event][0]
 		else:
 			self.logger.error("Event was not in _handled_events")
+		self.gtk_update()
 		
 	def send_to_modules(self, event):
+		self.logger.debug("Sending event(%s) to modules" % event)
 		handled = event.handled
 		def new_handled():
 			self.event_handled(event)
 		event.handled = new_handled
-		self._handled_events[event] = [handled, 0]
+		self._handled_events[event] = [handled, len(self._modules)]
 		for module in self._modules:
-			self._handled_events[event][1] += 1
 			module.handle_event(event)
+		self.gtk_update()
 			
 	def invalidate_to_modules(self, event):
 		for module in self._modules:
 			module.event_is_invalid(event)
 	
 	def handle_event(self, event):
+		self.logger.debug("in handle_event for event(%s)" % event)
 		if time.time() >= event.time:
 			self.logger.debug("Handling the event %s" % event)
 			event.handle()
 			self._event_queue.remove(event)
-#			self._event_queue.sort()
 		else:
 			self.logger.debug("Event not yet due. Procrastinating")
 	
@@ -252,17 +284,25 @@ class Noteo:
 			self.event_timer = None
 		for e in eq:
 			self.handle_event(e)
+		self.gtk_update()
 		eq.sort()
 		if len(eq):
 			wait_time = eq[0].time - time.time()
-			if wait_time <= 0:
-				wait_time = 0
-			self.event_timer = Timer(wait_time, self.event_loop)
-			self.event_timer.start()
-			self.logger.debug("Started a timer with delay of %s" % wait_time)
-			self.event_loop_running = False
+			if wait_time > 0:
+				self.event_timer = Timer(wait_time, self.event_loop)
+				self.event_timer.start()
+				self.logger.debug("Started a timer with delay of %s" % wait_time)
+				self.event_loop_running = False
+			else:
+				self.event_loop_running = False
+				self.event_loop()
+				return
 		else:
 			self.logger.debug("No events to handle. \
 Exiting event_loop")
 			self.event_loop_running = False
+	
+	def gtk_update(self):
+		while gtk.events_pending():
+			gtk.main_iteration()
 		
