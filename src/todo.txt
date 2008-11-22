@@ -15,3 +15,7 @@ ICONS
 THINGS PASSED
  - when an event should be ended prematurely, then is it valid to 
  call handled? NO IT IS NOT IMO 
+
+
+RECURRINGFUNCTIONCALLEVENT
+ - add option to force repeat, even if it returns false

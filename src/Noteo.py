@@ -34,7 +34,7 @@ class Event(object):
 	def handle(self):
 		pass
 
-	def handled(self, handler=None):
+	def handled(self, event, handler=None):
 		pass
 
 	def should_handle(self):
@@ -71,20 +71,25 @@ class FunctionCallEvent(Event):
 			return_value = self.function(*self.args, **self.kwargs)
 		else:
 			self.noteo.logger.warning("Function was not callable")
-		self.handled()
+		self.handled(self)
 		return return_value
 
 
 class NotificationEvent(Event):
-	def __init__(self, noteo, due_in, summary, content, icon="", timeout=-1):
+	def __init__(self, noteo, due_in, summary, content, icon="", timeout=-1, handled=None):
 		self.summary = summary
 		self.content = content
 		self.icon = icon
 		self.timeout = timeout
+		self.on_handled = handled
 		super(NotificationEvent, self).__init__(noteo, due_in)
 	
 	def handle(self):
 		self.noteo.send_to_modules(self)
+
+	def handled(self, event, handlers=None):
+		if callable(self.on_handled):
+			self.on_handled(event)
 
 	def __repr__(self):
 		return '"%s" "%s" "%s"' % (self.summary, self.content, self.icon)
@@ -114,8 +119,8 @@ class RecurringEvent(Event):
 		self.event.time = time.time() + self.interval
 		self.noteo.add_event_to_queue(self.event)
 
-	def handled(self, handlers=None):
-		self.event_handled()
+	def handled(self, event, handlers=None):
+		self.event_handled(self)
 		self.handle()
 
 class RecurringFunctionCallEvent(Event):
@@ -159,7 +164,7 @@ class NoteoModule(object):
 	def handle_event(self, event):
 		self.noteo.logger.info("Handling event %s" % event)
 		return_val = self.do_handle_event(event)
-		event.handled()
+		event.handled(event)
 		return return_val
 
 	def do_handle_event(self, event):
@@ -237,13 +242,13 @@ class Noteo:
 		self.event_loop()
 		self.gtk_update()
 	
-	def event_handled(self, event=None):
+	def event_handled(self, event):
 		self.logger.info("Event(%s) handled" % event)
 		if event in self._handled_events:
 			self._handled_events[event][1] -= 1
 			if self._handled_events[event][1] <= 0:
-				self._handled_events[event][0]()
-				del self._handled_events[event][0]
+				self._handled_events[event][0](event)
+				del self._handled_events[event]
 		else:
 			self.logger.error("Event was not in _handled_events")
 		self.gtk_update()
@@ -251,7 +256,7 @@ class Noteo:
 	def send_to_modules(self, event):
 		self.logger.debug("Sending event(%s) to modules" % event)
 		handled = event.handled
-		def new_handled():
+		def new_handled(event):
 			self.event_handled(event)
 		event.handled = new_handled
 		self._handled_events[event] = [handled, len(self._modules)]
@@ -305,4 +310,5 @@ Exiting event_loop")
 	def gtk_update(self):
 		while gtk.events_pending():
 			gtk.main_iteration()
+		return True
 		

@@ -29,7 +29,7 @@ class Popup(NoteoModule):
 
     def popup_expired_for_event(self, event):
         self.destroy_popup_for_event(event)
-        event.handled()
+        event.handled(event)
 
     def create_popup(self, summary, content, icon):
         popup = gtk.Window(gtk.WINDOW_POPUP)
