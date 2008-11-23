@@ -100,8 +100,25 @@ class NotificationEvent(Event):
 	def get_content(self):
 		return str(self.content)
 
-	def get_icon(self):
-		return "" #TODO: THIS
+	def get_icon(self, size=64):
+		'''get_icon(size=64)
+		uses the value of self.icon
+		if self.icon is an icon, then this is simply returned
+		if icon is a path to an image, this image is loaded and returned,
+		if icon is a string, this is looked up as a gtk icon
+		returns a gtk.gdk.Pixbuf if an icon can be found, or None otherwise'''
+		if isinstance(self.icon, gtk.gdk.Pixbuf):
+			return self.icon
+		elif os.path.exists(self.icon):
+			return gtk.gdk.pixbuf_new_from_file_at_size(self.icon, size, size)
+		else:
+			icon_theme = gtk.icon_theme_get_default()
+			if icon_theme.has_icon(self.icon):
+				try:
+					return icon_theme.load_icon(self.icon, size, 0)
+				except:
+					return None
+		return None
 
 	def get_timeout(self):
 		return self.timeout
@@ -162,10 +179,24 @@ class NoteoModule(object):
 		self.config = NoteoConfig(config_path, self.config_spec)
 		
 	def handle_event(self, event):
-		self.noteo.logger.info("Handling event %s" % event)
-		return_val = self.do_handle_event(event)
-		event.handled(event)
-		return return_val
+		superclasses = event.__class__.mro()
+		def default_handle_event(event):
+			self.noteo.logger.info("Handling event %s with default handler" % event)
+			return_val = self.do_handle_event(event)
+			event.handled(event)
+			return return_val
+		for supercls in superclasses:
+			name = supercls.__name__.lower()
+			if name == 'event':
+				return default_handle_event(event)
+			elif hasattr(self, "handle_%s" % name):
+				return getattr(self, "handle_%s" % name)(event)
+			elif hasattr(self, "do_handle_%s" % name):
+				return_val = getattr(self, "do_handle_%s" % name)(event)
+				event.handled(event)
+				return return_val
+		self.noteo.logger.error("Reached end of handle_event - something ain't right here")
+		return None
 
 	def do_handle_event(self, event):
 		'''do_handle_event(event)
@@ -190,14 +221,15 @@ class Noteo:
 	local_module_dir = os.path.expandvars('$HOME/.noteo')
 	module_dir = '/usr/share/noteo/'
 	config_dir = os.path.expandvars('$HOME/.config/noteo')
-	def __init__(self):
+	def __init__(self, load_modules = True):
 		self.logger.basicConfig(level=logging.DEBUG)
 		self._event_queue = []
 		self._handled_events = {}
 		self._to_add_to_queue = []
 		self._modules = []
 		self._configure()
-		self._load_modules()
+		if load_modules:
+			self._load_modules()
 	
 	#configuration
 	def _configure(self):
@@ -233,6 +265,7 @@ class Noteo:
 			self.logger.error("Errors occured when importing the module %s"
 					  % module_name)
 			self.logger.error("The error were: %s" % str(sys.exc_info()))
+			raise
 		finally:
 			sys.path.pop()
 

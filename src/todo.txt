@@ -19,3 +19,6 @@ THINGS PASSED
 
 RECURRINGFUNCTIONCALLEVENT
  - add option to force repeat, even if it returns false
+
+HEAPIFY
+see http://www.python.org/doc/2.5.2/lib/module-heapq.html

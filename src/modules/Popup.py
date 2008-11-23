@@ -3,11 +3,13 @@ import gtk
 from Noteo import *
 
 class Popup(NoteoModule):
+    config_spec = {
+        'defaultTimeout': 'float(default=5)',
+        }
     def init(self):
         self._popups = {}
-        self.config = {'defaultTimeout': 5,}
 
-    def handle_event(self, event):
+    def handle_notificationevent(self, event):
         self._popups[event] = self.create_popup(
             event.get_summary(),
             event.get_content(),
@@ -34,14 +36,22 @@ class Popup(NoteoModule):
     def create_popup(self, summary, content, icon):
         popup = gtk.Window(gtk.WINDOW_POPUP)
         
-        summary_label = gtk.Label(summary)
-        content_label = gtk.Label(content)
+        summary_label = gtk.Label()
+        summary_label.set_markup(summary)
+        content_label = gtk.Label()
+        content_label.set_markup(content)
 
         vbox = gtk.VBox()
         vbox.pack_start(summary_label)
         vbox.pack_start(content_label)
 
-        popup.add(vbox)
+        hbox = gtk.HBox()
+        ico = gtk.image_new_from_pixbuf(icon)
+        
+        hbox.pack_start(ico)
+        hbox.pack_start(vbox)
+
+        popup.add(hbox)
         popup.show_all()
 
         return popup

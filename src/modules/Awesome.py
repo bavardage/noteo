@@ -10,10 +10,7 @@ class Awesome(NoteoModule):
     def init(self):
         pass
 
-    def do_handle_event(self, event):
-        if event.__class__ is not NotificationEvent:
-            self.debug("Returning, since not NotificationEvent")
-            return
+    def do_handle_notificationevent(self, event):
         self.do_output(event.get_summary(), event.get_content(),
                        event.get_icon())
 
@@ -23,7 +20,7 @@ class Awesome(NoteoModule):
         command = self.config['command']
         command = command.replace("%s", summary)
         command = command.replace("%c", content)
-        command = command.replace("%i", icon)
+        #command = command.replace("%i", icon)
         command = command.replace("\n", " ")
         self.awesome_client(command)
 
