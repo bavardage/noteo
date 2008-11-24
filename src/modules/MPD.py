@@ -19,7 +19,10 @@ class MPD(NoteoModule):
         except:
             self.noteo.logger.error("Couldn't connect to mpd on %s:%s" % 
                              (self.config['host'], self.config['port']))
-        self.update_event = RecurringFunctionCallEvent(self.noteo, self.update, self.config['pollInterval'])
+        self.update_event = RecurringFunctionCallEvent(self.noteo, 
+                                                       self.update, 
+                                                       self.config['pollInterval']
+                                                       )
         self.noteo.add_event_to_queue(self.update_event)
 
     def update(self):

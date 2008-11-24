@@ -4,7 +4,7 @@ from Noteo import *
 
 class GmailCheck(NoteoModule):
     config_spec = {
-        'checkInterval': 'float(default=10)',
+        'checkInterval': 'float(default=120)',
         'usernames': 'list(default=list(username1, username2))',
         'passwords': 'list(default=list(password1, password2))',
         }
