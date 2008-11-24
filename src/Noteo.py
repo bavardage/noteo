@@ -275,6 +275,11 @@ class Noteo:
 		self.event_loop()
 		self.gtk_update()
 	
+	def add_events_to_queue(self, events):
+		self._event_queue.extend(events)
+		self.event_loop()
+		self.gtk_update()
+	
 	def event_handled(self, event):
 		self.logger.info("Event(%s) handled" % event)
 		if event in self._handled_events:

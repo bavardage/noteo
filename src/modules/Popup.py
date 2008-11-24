@@ -38,8 +38,10 @@ class Popup(NoteoModule):
         
         summary_label = gtk.Label()
         summary_label.set_markup(summary)
+        summary_label.set_line_wrap(True)
         content_label = gtk.Label()
         content_label.set_markup(content)
+        content_label.set_line_wrap(True)
 
         vbox = gtk.VBox()
         vbox.pack_start(summary_label)
@@ -52,6 +54,7 @@ class Popup(NoteoModule):
         hbox.pack_start(vbox)
 
         popup.add(hbox)
+        popup.set_default_size(200, 50)
         popup.show_all()
 
         return popup
