@@ -9,7 +9,7 @@ class Popup(NoteoModule):
     def init(self):
         self._popups = {}
 
-    def handle_notificationevent(self, event):
+    def handle_NotificationEvent(self, event):
         self._popups[event] = self.create_popup(
             event.get_summary(),
             event.get_content(),

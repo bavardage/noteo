@@ -1,19 +1,21 @@
 // - add ordering to events
  - do proper logging support
- - pass handlers to events done with event_handled
- - add some way of calling back a return value from events
+#PERHAPS NOT NEEDED  - pass handlers to events done with event_handled
+# NOT NEEDED AT THIS TImE PERhAPS  - add some way of calling back a return value from events
  
 AWESOME
  - escape command string
+
  - work out a way of identifying different event types, so that I can detect a subclass
-    of notification event as a notification event
+    of notification event as a notification event #DONE
+
 
 
 ICONS
- - allow both a gtk name and path to be passed, return only ever paths
+DONE  - allow both a gtk name and path to be passed, return only ever paths
 
 THINGS PASSED
- - when an event should be ended prematurely, then is it valid to 
+PERHAPS NOT???! - when an event should be ended prematurely, then is it valid to 
  call handled? NO IT IS NOT IMO 
 
 
@@ -22,3 +24,13 @@ RECURRINGFUNCTIONCALLEVENT
 
 HEAPIFY
 see http://www.python.org/doc/2.5.2/lib/module-heapq.html
+
+
+Watch folder
+ - make a watch folder plugin
+
+Fogobogo
+ - add him to credits
+
+Credits 
+ - make some credits

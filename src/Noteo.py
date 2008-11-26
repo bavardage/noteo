@@ -186,7 +186,7 @@ class NoteoModule(object):
 			event.handled(event)
 			return return_val
 		for supercls in superclasses:
-			name = supercls.__name__.lower()
+			name = supercls.__name__
 			if name == 'event':
 				return default_handle_event(event)
 			elif hasattr(self, "handle_%s" % name):

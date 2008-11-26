@@ -10,7 +10,7 @@ class Awesome(NoteoModule):
     def init(self):
         pass
 
-    def do_handle_notificationevent(self, event):
+    def do_handle_NotificationEvent(self, event):
         self.do_output(event.get_summary(), event.get_content(),
                        event.get_icon())
 
