@@ -9,6 +9,7 @@ from threading import Timer
 import os
 import sys
 import gtk
+import heapq
 
 from configobj import ConfigObj
 from validate import Validator
@@ -188,14 +189,14 @@ class NoteoModule(object):
 		for supercls in superclasses:
 			name = supercls.__name__
 			if name == 'event':
-				return default_handle_event(event)
+				return handle_event(event)
 			elif hasattr(self, "handle_%s" % name):
 				return getattr(self, "handle_%s" % name)(event)
 			elif hasattr(self, "do_handle_%s" % name):
 				return_val = getattr(self, "do_handle_%s" % name)(event)
 				event.handled(event)
 				return return_val
-		self.noteo.logger.error("Reached end of handle_event - something ain't right here")
+		self.noteo.logger.error("Reached end of handle_event in %s, this probably shouldn't happen" % self.modulename)
 		return None
 
 	def do_handle_event(self, event):
@@ -212,6 +213,37 @@ class NoteoModule(object):
 		nothing'''
 		pass
 
+class EventQueue:
+	def __init__(self):
+		self.queue = []
+	
+	def __len__(self):
+		return len(self.queue)
+
+	def __getitem__(self, key):
+		return self.queue[key]
+
+	def __iter__(self):
+		return self.queue.__iter__()
+
+	def append(self, item):
+		heapq.heappush(self.queue, item)
+		self.queue.sort()
+
+	def extend(self, items):
+		for item in items:
+			heapq.heappush(self.queue, item)
+		self.queue.sort()
+
+	def remove(self, item):
+		self.queue.remove(item)
+
+	def __repr__(self):
+		times = []
+		for event in self.queue:
+			times.append(str(event.time))
+		return ", ".join(times)
+
 class Noteo:
 	logger = logging
 	#event loop stuff
@@ -223,7 +255,7 @@ class Noteo:
 	config_dir = os.path.expandvars('$HOME/.config/noteo')
 	def __init__(self, load_modules = True):
 		self.logger.basicConfig(level=logging.DEBUG)
-		self._event_queue = []
+		self._event_queue = EventQueue()
 		self._handled_events = {}
 		self._to_add_to_queue = []
 		self._modules = []
@@ -328,7 +360,6 @@ class Noteo:
 		for e in eq:
 			self.handle_event(e)
 		self.gtk_update()
-		eq.sort()
 		if len(eq):
 			wait_time = eq[0].time - time.time()
 			if wait_time > 0:
