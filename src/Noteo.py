@@ -217,32 +217,30 @@ class EventQueue:
 	def __init__(self):
 		self.queue = []
 	
-	def __len__(self):
-		return len(self.queue)
+	def peek(self):
+		try:
+			return self.queue[0]
+		except:
+			return False
 
-	def __getitem__(self, key):
-		return self.queue[key]
+	def pop(self):
+		try:
+			item = self.queue[0]
+			self.remove(item)
+			return item
+		except:
+			return False
 
-	def __iter__(self):
-		return self.queue.__iter__()
-
-	def append(self, item):
-		heapq.heappush(self.queue, item)
+	def push(self, item):
+		self.queue.append(item)
 		self.queue.sort()
 
 	def extend(self, items):
-		for item in items:
-			heapq.heappush(self.queue, item)
+		self.queue.extend(items)
 		self.queue.sort()
 
 	def remove(self, item):
 		self.queue.remove(item)
-
-	def __repr__(self):
-		times = []
-		for event in self.queue:
-			times.append(str(event.time))
-		return ", ".join(times)
 
 class Noteo:
 	logger = logging
@@ -303,7 +301,7 @@ class Noteo:
 
 	#events
 	def add_event_to_queue(self, event):
-		self._event_queue.append(event)
+		self._event_queue.push(event)
 		self.event_loop()
 		self.gtk_update()
 	
@@ -340,12 +338,7 @@ class Noteo:
 	
 	def handle_event(self, event):
 		self.logger.debug("in handle_event for event(%s)" % event)
-		if time.time() >= event.time:
-			self.logger.debug("Handling the event %s" % event)
-			event.handle()
-			self._event_queue.remove(event)
-		else:
-			self.logger.debug("Event not yet due. Procrastinating")
+		event.handle()
 	
 	def event_loop(self):
 		eq = self._event_queue
@@ -355,17 +348,18 @@ class Noteo:
 		self.event_loop_running = True
 		if self.event_timer is not None:
 			#if there is currently a timer going, kill it!
+			self.logger.debug("Killing timer (%s)" % self.event_timer)
 			self.event_timer.cancel()
 			self.event_timer = None
-		for e in eq:
-			self.handle_event(e)
+		while eq.peek() and eq.peek().time <= time.time():
+			self.handle_event(eq.pop())
 		self.gtk_update()
-		if len(eq):
-			wait_time = eq[0].time - time.time()
+		if eq.peek():
+			wait_time = eq.peek().time - time.time()
 			if wait_time > 0:
 				self.event_timer = Timer(wait_time, self.event_loop)
 				self.event_timer.start()
-				self.logger.debug("Started a timer with delay of %s" % wait_time)
+				self.logger.debug("Started a timer (%s) with delay of %s" % (self.event_timer, wait_time))
 				self.event_loop_running = False
 			else:
 				self.event_loop_running = False
