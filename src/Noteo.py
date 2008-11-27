@@ -5,11 +5,9 @@
 
 import time
 import logging
-from threading import Timer
 import os
 import sys
 import gtk
-import heapq
 
 from configobj import ConfigObj
 from validate import Validator
@@ -241,6 +239,13 @@ class EventQueue:
 
 	def remove(self, item):
 		self.queue.remove(item)
+		self.queue.sort()
+
+	def __repr__(self):
+		output = []
+		for e in self.queue:
+			output.append(str(time.time() - e.time))
+		return ", ".join(output)
 
 class Noteo:
 	logger = logging
@@ -302,12 +307,12 @@ class Noteo:
 	#events
 	def add_event_to_queue(self, event):
 		self._event_queue.push(event)
-		self.event_loop()
+		#self.event_loop()
 		self.gtk_update()
 	
 	def add_events_to_queue(self, events):
 		self._event_queue.extend(events)
-		self.event_loop()
+		#self.event_loop()
 		self.gtk_update()
 	
 	def event_handled(self, event):
@@ -341,34 +346,20 @@ class Noteo:
 		event.handle()
 	
 	def event_loop(self):
-		eq = self._event_queue
-		self.logger.debug("Entering event_loop")
-		if self.event_loop_running:
-			return
-		self.event_loop_running = True
-		if self.event_timer is not None:
-			#if there is currently a timer going, kill it!
-			self.logger.debug("Killing timer (%s)" % self.event_timer)
-			self.event_timer.cancel()
-			self.event_timer = None
-		while eq.peek() and eq.peek().time <= time.time():
-			self.handle_event(eq.pop())
-		self.gtk_update()
-		if eq.peek():
-			wait_time = eq.peek().time - time.time()
-			if wait_time > 0:
-				self.event_timer = Timer(wait_time, self.event_loop)
-				self.event_timer.start()
-				self.logger.debug("Started a timer (%s) with delay of %s" % (self.event_timer, wait_time))
-				self.event_loop_running = False
-			else:
-				self.event_loop_running = False
-				self.event_loop()
+		while True:
+			eq = self._event_queue
+			self.logger.debug("Entering event_loop")
+			while eq.peek() and eq.peek().time <= time.time():
+				self.handle_event(eq.pop())
+			self.gtk_update()
+			if not eq.peek():
+				self.logger.warning("No events to handle - exiting")
 				return
-		else:
-			self.logger.debug("No events to handle. \
-Exiting event_loop")
-			self.event_loop_running = False
+			else:
+				wait_time = eq.peek().time - time.time()
+				if wait_time > 0:
+					self.logger.info("Sleeping for %.3f" % wait_time)
+					time.sleep(wait_time)
 	
 	def gtk_update(self):
 		while gtk.events_pending():
