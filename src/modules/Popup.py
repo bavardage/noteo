@@ -7,6 +7,7 @@ class Popup(NoteoModule):
         'defaultTimeout': 'float(default=5)',
         }
     def init(self):
+        self.noteo.gtk_required()
         self._popups = {}
 
     def handle_NotificationEvent(self, event):

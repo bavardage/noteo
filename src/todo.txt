@@ -1,12 +1,12 @@
 // - add ordering to events
- - do proper logging support
+DONE FAIRLY MUCH - do proper logging support
 #PERHAPS NOT NEEDED  - pass handlers to events done with event_handled
 # NOT NEEDED AT THIS TImE PERhAPS  - add some way of calling back a return value from events
  
 AWESOME
  - escape command string
 
- - work out a way of identifying different event types, so that I can detect a subclass
+DONE - work out a way of identifying different event types, so that I can detect a subclass
     of notification event as a notification event #DONE
 
 
@@ -23,7 +23,7 @@ RECURRINGFUNCTIONCALLEVENT
  - add option to force repeat, even if it returns false
 
 HEAPIFY
-see http://www.python.org/doc/2.5.2/lib/module-heapq.html
+NO LONGER DOING see http://www.python.org/doc/2.5.2/lib/module-heapq.html
  - roll my own, but at least make EventQueue behave like a heap
 peek
 pop
@@ -39,3 +39,16 @@ Fogobogo
 
 Credits 
  - make some credits
+
+
+
+!!!!!!!!!!!!!!
+FOR EVENTS, ADD A add_to_event_queue() method
+ convert all modules to use this
+actually don't
+just make events add themselves
+
+not reason not to...........
+
+ALSO
+make a decorator for menu items!?

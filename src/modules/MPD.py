@@ -24,6 +24,18 @@ class MPD(NoteoModule):
                                                        self.config['pollInterval']
                                                        )
         self.noteo.add_event_to_queue(self.update_event)
+        notify_current_song_menu_item = CreateMenuItemEvent(self.noteo,
+                                                            "Show current song",
+                                                            self.notify_current_song,
+                                                            icon='audio-x-generic'
+                                                            )
+        self.noteo.add_event_to_queue(notify_current_song_menu_item)
+
+    def notify_current_song(self):
+        summary = 'Track changed'
+        content = '\n'.join([self.currentsong[key] for key in ('title', 'artist', 'album') if key in self.currentsong])
+        notification = NotificationEvent(self.noteo, 0, summary, content, "audio-x-generic")
+        self.noteo.add_event_to_queue(notification)
 
     def update(self):
         try:
@@ -37,10 +49,7 @@ class MPD(NoteoModule):
             self.noteo.add_event_to_queue(self.reconnect_event)
             return False
         if self.currentsong != self.lastsong:
-            summary = 'Track changed'
-            content = '\n'.join([self.currentsong[key] for key in ('title', 'artist', 'album') if key in self.currentsong])
-            notification = NotificationEvent(self.noteo, 0, summary, content, "audio-x-generic")
-            self.noteo.add_event_to_queue(notification)
+            self.notify_current_song()
             self.lastsong = self.currentsong
         return True
 

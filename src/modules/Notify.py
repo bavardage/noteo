@@ -11,20 +11,14 @@ from Noteo import *
 class Notify(NoteoModule):
     last_id = 0
     def init(self):
-        self.config = {'pollInterval': 1, 'defaultTimeout': 5}
+        self.noteo.gtk_required()
+        self.config = { 'defaultTimeout': 5}
         self._notifications = {}
         self.notification_daemon = NotificationDaemon(
             self,
             session_bus, 
             '/org/freedesktop/Notifications'
             )
-        self.collect_notifications_event = \
-            RecurringFunctionCallEvent(
-            self.noteo, 
-            self.noteo.gtk_update, 
-            self.config['pollInterval']
-            )
-        self.noteo.add_event_to_queue(self.collect_notifications_event)
 
     def get_id(self):
         self.last_id += 1

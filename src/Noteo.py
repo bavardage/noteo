@@ -24,6 +24,25 @@ class NoteoConfig:
 		except(KeyError):
 			raise KeyError, field + " is not a valid config option"
 
+def get_icon(icon, size=64):
+	'''get_icon(size=64)
+	uses the value of self.icon
+	if self.icon is an icon, then this is simply returned
+	if icon is a path to an image, this image is loaded and returned,
+	if icon is a string, this is looked up as a gtk icon
+	returns a gtk.gdk.Pixbuf if an icon can be found, or None otherwise'''
+	if isinstance(icon, gtk.gdk.Pixbuf):
+		return icon
+	elif os.path.exists(icon):
+		return gtk.gdk.pixbuf_new_from_file_at_size(icon, size, size)
+	else:
+		icon_theme = gtk.icon_theme_get_default()
+		if icon_theme.has_icon(icon):
+			try:
+				return icon_theme.load_icon(icon, size, 0)
+			except:
+				return None
+		return None
 
 class Event(object):
 	def __init__(self, noteo, due_in):
@@ -100,24 +119,7 @@ class NotificationEvent(Event):
 		return str(self.content)
 
 	def get_icon(self, size=64):
-		'''get_icon(size=64)
-		uses the value of self.icon
-		if self.icon is an icon, then this is simply returned
-		if icon is a path to an image, this image is loaded and returned,
-		if icon is a string, this is looked up as a gtk icon
-		returns a gtk.gdk.Pixbuf if an icon can be found, or None otherwise'''
-		if isinstance(self.icon, gtk.gdk.Pixbuf):
-			return self.icon
-		elif os.path.exists(self.icon):
-			return gtk.gdk.pixbuf_new_from_file_at_size(self.icon, size, size)
-		else:
-			icon_theme = gtk.icon_theme_get_default()
-			if icon_theme.has_icon(self.icon):
-				try:
-					return icon_theme.load_icon(self.icon, size, 0)
-				except:
-					return None
-		return None
+		return get_icon(self.icon, size)
 
 	def get_timeout(self):
 		return self.timeout
@@ -155,6 +157,30 @@ class RecurringFunctionCallEvent(Event):
 			self.noteo.add_event_to_queue(self)
 		return return_value
 
+class CreateMenuItemEvent(Event):
+	def __init__(self, noteo, label, callback, icon=None):
+		self.label = label
+		self.callback = callback
+		self.icon = icon
+		super(CreateMenuItemEvent, self).__init__(noteo, 0)
+	
+	def get_icon(self, size=64):
+		return get_icon(self.icon, size)
+	
+	def handle(self):
+		self.noteo.send_to_modules(self)
+
+class QuitEvent(Event):
+	def __init__(self, noteo, quit_in):
+		super(QuitEvent, self).__init__(noteo, quit_in)
+
+	def handle(self):
+		try:
+			gtk.main_quit()
+		except:
+			pass
+		sys.exit(0)
+
 class NoteoModule(object):
 	'''NoteoModule is used to provide most of noteo's functionality
 	This should not be used by itself, but used as a super class'''
@@ -186,8 +212,8 @@ class NoteoModule(object):
 			return return_val
 		for supercls in superclasses:
 			name = supercls.__name__
-			if name == 'event':
-				return handle_event(event)
+			if name == 'Event':
+				return default_handle_event(event)
 			elif hasattr(self, "handle_%s" % name):
 				return getattr(self, "handle_%s" % name)(event)
 			elif hasattr(self, "do_handle_%s" % name):
@@ -195,6 +221,7 @@ class NoteoModule(object):
 				event.handled(event)
 				return return_val
 		self.noteo.logger.error("Reached end of handle_event in %s, this probably shouldn't happen" % self.modulename)
+		self.noteo.logger.error("Event had type: %s, mro of (%s)" % (event.__class__.__name__, event.__class__.mro()))
 		return None
 
 	def do_handle_event(self, event):
@@ -252,6 +279,8 @@ class Noteo:
 	#event loop stuff
 	event_loop_running = False
 	event_timer = None
+	#gtk
+	gtk_is_required = False
 	#module, paths, etc
 	local_module_dir = os.path.expandvars('$HOME/.noteo')
 	module_dir = '/usr/share/noteo/'
@@ -275,6 +304,7 @@ class Noteo:
 		config_spec = {
 			'localmodules': 'list(default=list(\'Test\'))',
 			'modules': 'list(default=list(\'RemoteTest\'))',
+			'threadGTK': 'boolean(default=False)',
 			}
 		config_path = os.path.join(Noteo.config_dir, 'Noteo')
 		self.config = NoteoConfig(config_path, config_spec)
@@ -308,12 +338,12 @@ class Noteo:
 	def add_event_to_queue(self, event):
 		self._event_queue.push(event)
 		#self.event_loop()
-		self.gtk_update()
+		#self.gtk_update()
 	
 	def add_events_to_queue(self, events):
 		self._event_queue.extend(events)
 		#self.event_loop()
-		self.gtk_update()
+		#self.gtk_update()
 	
 	def event_handled(self, event):
 		self.logger.info("Event(%s) handled" % event)
@@ -324,7 +354,7 @@ class Noteo:
 				del self._handled_events[event]
 		else:
 			self.logger.error("Event was not in _handled_events")
-		self.gtk_update()
+		#self.gtk_update()
 		
 	def send_to_modules(self, event):
 		self.logger.debug("Sending event(%s) to modules" % event)
@@ -335,7 +365,7 @@ class Noteo:
 		self._handled_events[event] = [handled, len(self._modules)]
 		for module in self._modules:
 			module.handle_event(event)
-		self.gtk_update()
+		#self.gtk_update()
 			
 	def invalidate_to_modules(self, event):
 		for module in self._modules:
@@ -351,7 +381,7 @@ class Noteo:
 			self.logger.debug("Entering event_loop")
 			while eq.peek() and eq.peek().time <= time.time():
 				self.handle_event(eq.pop())
-			self.gtk_update()
+			#self.gtk_update()
 			if not eq.peek():
 				self.logger.warning("No events to handle - exiting")
 				return
@@ -361,6 +391,24 @@ class Noteo:
 					self.logger.info("Sleeping for %.3f" % wait_time)
 					time.sleep(wait_time)
 	
+	def gtk_required(self):
+		self.logger.debug("GTK is required")
+		self.logger.debug("Already required? %s" % self.gtk_is_required)
+		if not self.gtk_is_required:
+			if self.config['threadGTK']:
+				from threading import Timer
+				gtk.gdk.threads_init()
+				t = Timer(0.1, gtk.main)
+				t.start()
+			else:
+				self.logger.debug("Not already set-up. Setting up...")
+				event = RecurringFunctionCallEvent(
+					self,
+					self.gtk_update,
+					0.1)
+				self.add_event_to_queue(event)
+		self.gtk_is_required = True
+
 	def gtk_update(self):
 		while gtk.events_pending():
 			gtk.main_iteration()

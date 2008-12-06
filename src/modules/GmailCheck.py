@@ -20,9 +20,18 @@ class GmailCheck(NoteoModule):
                                              self.login
                                              )
         self.noteo.add_event_to_queue(self.login_event)
+        
+        check_mail_menu_item = CreateMenuItemEvent(self.noteo,
+                                                   "Check mail now",
+                                                   self.check,
+                                                   icon='stock_mail'
+                                                   )
+        self.noteo.add_event_to_queue(check_mail_menu_item)
 
     def check(self):
         self.noteo.logger.debug("Checking mail...")
+        if self.gmail_accounts is None:
+            self.login()
         for account in self.gmail_accounts:
             unread = account.getUnreadMessages()
             for message in unread:
