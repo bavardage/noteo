@@ -17,9 +17,11 @@ build() {
 	mkdir -p $startdir/pkg${_site_packages_dir}
 	mkdir -p $startdir/pkg/usr/bin
 	mkdir -p $startdir/pkg/usr/share/noteo
-	ls
+	mkdir -p $startdir/pkg/usr/share/pixmaps
+	
 	mv Noteo $startdir/pkg/usr/bin
 	mv Noteo.p* $startdir/pkg${_site_packages_dir}
 	mv modules $startdir/pkg/usr/share/noteo
+	mv noteo.png $startdir/pkg/usr/share/pixmaps
 
 }

@@ -9,7 +9,7 @@ class StatusIcon(NoteoModule):
         self.noteo.gtk_required()
         #setup status icon
         self.status_icon = gtk.StatusIcon()
-        self.status_icon.set_from_file('/home/ben/Pictures/noteo.png')
+        self.status_icon.set_from_file('/usr/share/pixmaps/noteo.png')
         self.status_icon.connect('popup_menu', self.show_menu)
         #basic menu items
         self.menu = gtk.Menu()
