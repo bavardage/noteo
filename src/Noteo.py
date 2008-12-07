@@ -286,7 +286,6 @@ class Noteo:
 	module_dir = '/usr/share/noteo/modules/'
 	config_dir = os.path.expandvars('$HOME/.config/noteo')
 	def __init__(self, load_modules = True):
-		self.logger.basicConfig(level=logging.DEBUG)
 		self._event_queue = EventQueue()
 		self._handled_events = {}
 		self._to_add_to_queue = []
@@ -302,12 +301,14 @@ class Noteo:
 		except:
 			self.logger.debug("Noteo configuration directory already exists")
 		config_spec = {
-			'localmodules': 'list(default=list(\'Test\'))',
+			'localmodules': 'list(default=list(\'\'))',
 			'modules': 'list(default=list(\'RemoteTest\'))',
 			'threadGTK': 'boolean(default=False)',
+			'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
 			}
 		config_path = os.path.join(Noteo.config_dir, 'Noteo')
 		self.config = NoteoConfig(config_path, config_spec)
+		self.logger.basicConfig(level=self.config['debugLevel'])
 
 	#modules
 	def _load_modules(self):
@@ -331,7 +332,7 @@ class Noteo:
 			self.logger.error("Errors occured when importing the module %s"
 					  % module_name)
 			self.logger.error("The error were: %s" % str(sys.exc_info()))
-			raise
+			#raise
 		finally:
 			sys.path.pop()
 

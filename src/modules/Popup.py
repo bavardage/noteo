@@ -5,6 +5,8 @@ from Noteo import *
 class Popup(NoteoModule):
     config_spec = {
         'defaultTimeout': 'float(default=5)',
+        'verticalArrangement': 'string(default=\'ascending\')',
+        'horizontalArrangement': 'string(default=\'right\')',
         }
     def init(self):
         self.noteo.gtk_required()
@@ -69,8 +71,8 @@ class Popup(NoteoModule):
             return False
 
     def position_popup_for_event(self, event):
-        vertical_arrangement = 'desocending'
-        horizontal_arrangement = 'right'
+        vertical_arrangement = self.config['verticalArrangement']
+        horizontal_arrangement = self.config['horizontalArrangement']
         width, height = self._popups[event].get_size()
         popup_y, popup_x = 0,0
         if vertical_arrangement == 'descending':
