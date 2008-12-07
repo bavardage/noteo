@@ -1,0 +1,9 @@
+# Contributor: Ben Duffield <jebavarde<AT>gmail.com>
+pkgname=noteo
+pkgver=0.1.0
+pkgrel=3
+arch=("i686" "x86_64")
+pkgdesc="A notifications system"
+url=""
+license=("GPL")
+depends=("pygtk" "configobj")

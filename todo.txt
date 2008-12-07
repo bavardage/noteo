@@ -1,0 +1,54 @@
+// - add ordering to events
+DONE FAIRLY MUCH - do proper logging support
+#PERHAPS NOT NEEDED  - pass handlers to events done with event_handled
+# NOT NEEDED AT THIS TImE PERhAPS  - add some way of calling back a return value from events
+ 
+AWESOME
+ - escape command string
+
+DONE - work out a way of identifying different event types, so that I can detect a subclass
+    of notification event as a notification event #DONE
+
+
+
+ICONS
+DONE  - allow both a gtk name and path to be passed, return only ever paths
+
+THINGS PASSED
+PERHAPS NOT???! - when an event should be ended prematurely, then is it valid to 
+ call handled? NO IT IS NOT IMO 
+
+
+RECURRINGFUNCTIONCALLEVENT
+ - add option to force repeat, even if it returns false
+
+HEAPIFY
+NO LONGER DOING see http://www.python.org/doc/2.5.2/lib/module-heapq.html
+ - roll my own, but at least make EventQueue behave like a heap
+peek
+pop
+push
+
+
+
+Watch folder
+ - make a watch folder plugin
+
+Fogobogo
+ - add him to credits
+
+Credits 
+ - make some credits
+
+
+
+!!!!!!!!!!!!!!
+FOR EVENTS, ADD A add_to_event_queue() method
+ convert all modules to use this
+actually don't
+just make events add themselves
+
+not reason not to...........
+
+ALSO
+make a decorator for menu items!?
