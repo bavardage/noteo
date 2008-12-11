@@ -7,6 +7,7 @@ class Popup(NoteoModule):
         'defaultTimeout': 'float(default=5)',
         'verticalArrangement': 'string(default=\'ascending\')',
         'horizontalArrangement': 'string(default=\'right\')',
+        'opacity': 'float(default=0.8)',
         }
     def init(self):
         self.noteo.gtk_required()
@@ -58,6 +59,7 @@ class Popup(NoteoModule):
 
         popup.add(hbox)
         popup.set_default_size(200, 50)
+        popup.set_opacity(self.config['opacity'])
         popup.show_all()
 
         return popup
@@ -87,7 +89,6 @@ class Popup(NoteoModule):
             smallest_height = gtk.gdk.screen_height()
             for e,p in self._popups.items():
                 x, y = p.get_position()
-                print y, smallest_height
                 if (e is not event) and y < smallest_height:
                     smallest_height = y
             popup_y = smallest_height - height
