@@ -286,11 +286,11 @@ class Noteo:
 	module_dir = '/usr/share/noteo/modules/'
 	config_dir = os.path.expandvars('$HOME/.config/noteo')
 	def __init__(self, load_modules = True):
+		self._configure()
 		self._event_queue = EventQueue()
 		self._handled_events = {}
 		self._to_add_to_queue = []
 		self._modules = []
-		self._configure()
 		if load_modules:
 			self._load_modules()
 	
@@ -299,16 +299,18 @@ class Noteo:
 		try:
 			os.makedirs(Noteo.config_dir)
 		except:
-			self.logger.debug("Noteo configuration directory already exists")
+			#self.logger.debug("Noteo configuration directory already exists")
+			pass
 		config_spec = {
 			'localmodules': 'list(default=list(\'\'))',
-			'modules': 'list(default=list(\'RemoteTest\'))',
+			'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup))',
 			'threadGTK': 'boolean(default=False)',
 			'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
 			}
 		config_path = os.path.join(Noteo.config_dir, 'Noteo')
 		self.config = NoteoConfig(config_path, config_spec)
 		self.logger.basicConfig(level=self.config['debugLevel'])
+		print "logging initialised for debug level %s" % self.config['debugLevel']
 
 	#modules
 	def _load_modules(self):
@@ -320,9 +322,8 @@ class Noteo:
 	
 	def _load_module(self, module_name, local=False):
 		if local:
-			path = os.path.join(Noteo.local_module_dir, module_name)
+			path = Noteo.local_module_dir
 		else:
-		#	path = os.path.join(Noteo.module_dir, module_name)
 			path = Noteo.module_dir
 		sys.path.append(path)
 		try:
@@ -416,3 +417,9 @@ class Noteo:
 			gtk.main_iteration()
 		return True
 		
+
+if __name__ == '__main__':
+	print "running noteo..."
+	noteo = Noteo()
+	noteo.event_loop()
+	print "done..."

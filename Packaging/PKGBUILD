@@ -1,14 +1,21 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
 pkgname=noteo
 pkgver=0.1.0
-pkgrel=3
+pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
-url=""
+url="http://code.google.com/p/noteo/"
 license=("GPL")
 depends=("pygtk" "python-configobj")
-source=("http://downloads.sourceforge.net/noteo/${pkgname}-${pkgver}.tar.gz")
-md5sums=()
+optdepends=('xmms2: xmms monitoring'
+            'mpd: mpd monitoring'
+            'libgmail: gmail checking'
+            'libnotify: libnotify support')
+provides=("notification-daemon")
+replaces=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
+conflicts=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
+source=("http://noteo.googlecode.com/files/${pkgname}-${pkgver}.tar.gz")
+md5sums=('f4d6dca56a22eb9c2a18a9938b6ba40e')
 
 build() {
 	cd $startdir/src/src/
@@ -19,7 +26,7 @@ build() {
 	mkdir -p $startdir/pkg/usr/share/noteo
 	mkdir -p $startdir/pkg/usr/share/pixmaps
 	
-	mv Noteo $startdir/pkg/usr/bin
+	mv noteo $startdir/pkg/usr/bin
 	mv Noteo.p* $startdir/pkg${_site_packages_dir}
 	mv modules $startdir/pkg/usr/share/noteo
 	mv noteo.png $startdir/pkg/usr/share/pixmaps

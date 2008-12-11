@@ -12,6 +12,7 @@ class Notify(NoteoModule):
     last_id = 0
     config_spec = {
         'defaultTimeout': 'float(default=7.0)',
+        }
     def init(self):
         self.noteo.gtk_required()
         self._notifications = {}
