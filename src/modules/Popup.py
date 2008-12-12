@@ -8,6 +8,7 @@ class Popup(NoteoModule):
         'verticalArrangement': 'string(default=\'ascending\')',
         'horizontalArrangement': 'string(default=\'right\')',
         'opacity': 'float(default=0.8)',
+        'maxCharsPerLine': 'integer(default=30)',
         }
     def init(self):
         self.noteo.gtk_required()
@@ -39,27 +40,30 @@ class Popup(NoteoModule):
 
     def create_popup(self, summary, content, icon):
         popup = gtk.Window(gtk.WINDOW_POPUP)
+        max_chars = self.config['maxCharsPerLine']
         
         summary_label = gtk.Label()
         summary_label.set_markup(summary)
+        summary_label.show()
         summary_label.set_line_wrap(True)
+        summary_label.set_width_chars(max_chars)
+        
         content_label = gtk.Label()
         content_label.set_markup(content)
+        content_label.show()
         content_label.set_line_wrap(True)
+        content_label.set_width_chars(max_chars)
 
         vbox = gtk.VBox()
+        
         vbox.pack_start(summary_label)
         vbox.pack_start(content_label)
 
         hbox = gtk.HBox()
-        ico = gtk.image_new_from_pixbuf(icon)
-        
-        hbox.pack_start(ico)
+        hbox.pack_start(gtk.image_new_from_pixbuf(icon))
         hbox.pack_start(vbox)
-
+        
         popup.add(hbox)
-        popup.set_default_size(200, 50)
-        popup.set_opacity(self.config['opacity'])
         popup.show_all()
 
         return popup
@@ -76,6 +80,7 @@ class Popup(NoteoModule):
         vertical_arrangement = self.config['verticalArrangement']
         horizontal_arrangement = self.config['horizontalArrangement']
         width, height = self._popups[event].get_size()
+        self.noteo.logger.debug("Positioning window of size (%s, %s)" % (width, height))
         popup_y, popup_x = 0,0
         if vertical_arrangement == 'descending':
             greatest_height = 0
