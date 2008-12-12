@@ -64,7 +64,9 @@ class Popup(NoteoModule):
         hbox.pack_start(vbox)
         
         popup.add(hbox)
+        popup.set_opacity(self.config['opacity'])
         popup.show_all()
+        
 
         return popup
 
