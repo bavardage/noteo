@@ -1,6 +1,6 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
 pkgname=noteo
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
@@ -15,7 +15,7 @@ provides=("notification-daemon")
 replaces=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
 conflicts=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
 source=("http://noteo.googlecode.com/files/${pkgname}-${pkgver}.tar.gz")
-md5sums=('01e53ddf2c97b4e8082570d0a9450b5a')
+md5sums=('965048cb00a05165b2d32bcedae25ca4')
 
 build() {
 	cd $startdir/src/src/
