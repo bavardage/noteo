@@ -1,3 +1,9 @@
+BUGFIXES
+need to make gmail die gracefully when no http connection
+
+
+
+
 // - add ordering to events
 DONE FAIRLY MUCH - do proper logging support
 #PERHAPS NOT NEEDED  - pass handlers to events done with event_handled
