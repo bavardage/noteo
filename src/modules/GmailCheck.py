@@ -33,7 +33,11 @@ class GmailCheck(NoteoModule):
         if self.gmail_accounts is None:
             self.login()
         for account in self.gmail_accounts:
-            unread = account.getUnreadMessages()
+            try:
+                unread = account.getUnreadMessages()
+            except:
+                unread = []
+                self.gmail_accounts = None
             for message in unread:
                 summary = "New message on %s" % account.name
                 content = message.subject
