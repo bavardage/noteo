@@ -1,5 +1,5 @@
 #!/bin/bash
 
-pkgver=0.1.2
+pkgver=0.1.3
 
 tar --exclude=*~ -cvzf noteo-${pkgver}.tar.gz ../src/
