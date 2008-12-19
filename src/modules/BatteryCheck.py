@@ -28,16 +28,39 @@ class BatteryCheck(NoteoModule):
                                                       self.config['pollInterval']
                                                       )
         self.noteo.add_event_to_queue(self.check_event)
-        
-    def check_battery(self):
-        self.noteo.logger.debug("Current state is %s %s" % self.state)
-        status = commands.getoutput('acpi')
-        percentage = 100 #default
+
+        menu_item = CreateMenuItemEvent(self.noteo,
+                                        "Current battery status",
+                                        self.report_current_status,
+                                        icon='battery'
+                                        )
+        self.noteo.add_event_to_queue(menu_item)
+
+    def get_status(self):
+        percentage = 100
         charging = False
+        status = commands.getoutput('acpi')
         if self.find_percentage.match(status):
             percentage = int(self.find_percentage.match(status).groups()[0])
         if not self.is_discharging.match(status):
             charging = True
+        return (percentage, charging)
+
+    def report_current_status(self):
+        percentage, charging = self.get_status()
+        summary = 'Battery at %s%%' % percentage
+        message = 'Battery is currently %s' % ('charging' if charging else 'discharging')
+        notification = NotificationEvent(self.noteo,
+                                         0,
+                                         summary,
+                                         message,
+                                         ('gpm-ac-adapter' if charging else 'battery'),
+                                         )
+        self.noteo.add_event_to_queue(notification)
+
+    def check_battery(self):
+        self.noteo.logger.debug("Current state is %s %s" % self.state)
+        percentage, charging = self.get_status()
         if charging:
             self.notified_low = False
             self.notified_critical = False
