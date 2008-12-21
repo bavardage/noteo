@@ -9,6 +9,8 @@ class Popup(NoteoModule):
         'horizontalArrangement': 'string(default=\'right\')',
         'opacity': 'float(default=0.8)',
         'maxCharsPerLine': 'integer(default=30)',
+        'xOffset': 'integer(default=0)',
+        'yOffset': 'integer(default=30)',
         }
     def init(self):
         self.noteo.gtk_required()
@@ -81,11 +83,13 @@ class Popup(NoteoModule):
     def position_popup_for_event(self, event):
         vertical_arrangement = self.config['verticalArrangement']
         horizontal_arrangement = self.config['horizontalArrangement']
+        xoffset = self.config['xOffset']
+        yoffset = self.config['yOffset']
         width, height = self._popups[event].get_size()
         self.noteo.logger.debug("Positioning window of size (%s, %s)" % (width, height))
-        popup_y, popup_x = 0,0
+        popup_x, popup_y = xoffset, 0
         if vertical_arrangement == 'descending':
-            greatest_height = 0
+            greatest_height = yoffset
             for e, p in self._popups.items():
                 w,h = p.get_size()
                 x, y = p.get_position()
@@ -93,14 +97,14 @@ class Popup(NoteoModule):
                     greatest_height = y + h
             popup_y = greatest_height
         else:
-            smallest_height = gtk.gdk.screen_height()
+            smallest_height = gtk.gdk.screen_height() - yoffset
             for e,p in self._popups.items():
                 x, y = p.get_position()
                 if (e is not event) and y < smallest_height:
                     smallest_height = y
             popup_y = smallest_height - height
         if horizontal_arrangement == 'right':
-            popup_x = gtk.gdk.screen_width() - width
+            popup_x = gtk.gdk.screen_width() - width - xoffset
         self._popups[event].move(popup_x, popup_y)
         self.noteo.gtk_update()
                
