@@ -7,7 +7,13 @@ import time
 import logging
 import os
 import sys
-import gtk
+try:
+	import gtk
+	NO_GTK = False
+except:
+	print "Warning: No gtk support. 
+Don't be surprised when your gtk-wanting modules go \"oh noes\""
+	NO_GTK = True
 
 from configobj import ConfigObj
 from validate import Validator
@@ -31,6 +37,8 @@ def get_icon(icon, size=64):
 	if icon is a path to an image, this image is loaded and returned,
 	if icon is a string, this is looked up as a gtk icon
 	returns a gtk.gdk.Pixbuf if an icon can be found, or None otherwise'''
+	if NO_GTK:
+		return None
 	if isinstance(icon, gtk.gdk.Pixbuf):
 		return icon
 	elif os.path.exists(icon):
@@ -397,6 +405,9 @@ class Noteo:
 	def gtk_required(self):
 		self.logger.debug("GTK is required")
 		self.logger.debug("Already required? %s" % self.gtk_is_required)
+		if NO_GTK:
+			self.logger.warning("pygtk is not installed, therefore no gtk support")
+			return
 		if not self.gtk_is_required:
 			if self.config['threadGTK']:
 				from threading import Timer
