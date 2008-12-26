@@ -24,8 +24,8 @@ try:
 	import gtk
 	NO_GTK = False
 except:
-	print "Warning: No gtk support. 
-Don't be surprised when your gtk-wanting modules go \"oh noes\""
+	print "Warning: No gtk support. "
+	print "Don't be surprised when your gtk-wanting modules go \"oh noes\""
 	NO_GTK = True
 
 from configobj import ConfigObj
