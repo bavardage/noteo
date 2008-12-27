@@ -342,7 +342,7 @@ class Noteo:
 			self._load_module(module_name, local=True)
 	
 	def _load_module(self, module_name, local=False):
-		if module_name = '':
+		if module_name == '':
 			self.logger.debug('Was trying to load a module with no name - not even bothering to try')
 			return
 		if local:
@@ -441,5 +441,11 @@ class Noteo:
 if __name__ == '__main__':
 	print "running noteo..."
 	noteo = Noteo()
-	noteo.event_loop()
+	try:
+		noteo.event_loop()
+	except KeyboardInterrupt:
+		print "Keyboard Interrupt"
+		quit_event = QuitEvent(noteo, 0)
+		noteo.add_event_to_queue(quit_event)
+		noteo.event_loop()
 	print "done..."
