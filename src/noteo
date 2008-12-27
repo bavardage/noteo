@@ -2,5 +2,4 @@
 from Noteo import *
 
 noteo = Noteo()
-
-noteo.event_loop()
+run_noteo()

@@ -438,7 +438,7 @@ class Noteo:
 		return True
 		
 
-if __name__ == '__main__':
+def run_noteo():
 	print "running noteo..."
 	noteo = Noteo()
 	try:
@@ -448,4 +448,9 @@ if __name__ == '__main__':
 		quit_event = QuitEvent(noteo, 0)
 		noteo.add_event_to_queue(quit_event)
 		noteo.event_loop()
-	print "done..."
+	print "...exiting noteo"
+	
+
+
+if __name__ == '__main__':
+	run_noteo()
