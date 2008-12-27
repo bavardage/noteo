@@ -361,13 +361,9 @@ class Noteo:
 	#events
 	def add_event_to_queue(self, event):
 		self._event_queue.push(event)
-		#self.event_loop()
-		#self.gtk_update()
 	
 	def add_events_to_queue(self, events):
 		self._event_queue.extend(events)
-		#self.event_loop()
-		#self.gtk_update()
 	
 	def event_handled(self, event):
 		self.logger.info("Event(%s) handled" % event)
@@ -378,7 +374,6 @@ class Noteo:
 				del self._handled_events[event]
 		else:
 			self.logger.error("Event was not in _handled_events")
-		#self.gtk_update()
 		
 	def send_to_modules(self, event):
 		self.logger.debug("Sending event(%s) to modules" % event)
@@ -389,7 +384,6 @@ class Noteo:
 		self._handled_events[event] = [handled, len(self._modules)]
 		for module in self._modules:
 			module.handle_event(event)
-		#self.gtk_update()
 			
 	def invalidate_to_modules(self, event):
 		for module in self._modules:
@@ -405,7 +399,6 @@ class Noteo:
 			self.logger.debug("Entering event_loop")
 			while eq.peek() and eq.peek().time <= time.time():
 				self.handle_event(eq.pop())
-			#self.gtk_update()
 			if not eq.peek():
 				self.logger.warning("No events to handle - exiting")
 				return
