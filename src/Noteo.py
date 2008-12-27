@@ -342,6 +342,9 @@ class Noteo:
 			self._load_module(module_name, local=True)
 	
 	def _load_module(self, module_name, local=False):
+		if module_name = '':
+			self.logger.debug('Was trying to load a module with no name - not even bothering to try')
+			return
 		if local:
 			path = Noteo.local_module_dir
 		else:
