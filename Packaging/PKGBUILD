@@ -18,7 +18,7 @@ source=("http://noteo.googlecode.com/files/${pkgname}-${pkgver}.tar.gz")
 md5sums=('1602382f5b6b54853b7feaa100544081')
 
 build() {
-	cd $startdir/src/"$pkgname-$pkgver"
+  cd $startdir/src/"$pkgname-$pkgver"
   python setup.py install --prefix=/usr --root="$startdir/pkg"
 }
 
