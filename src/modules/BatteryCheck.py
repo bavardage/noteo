@@ -23,6 +23,7 @@ class BatteryCheck(NoteoModule):
                 self.config['criticalPercentage'], self.config['lowPercentage']
         self.find_percentage = re.compile(r'.+?([0-9]+?)\%.*?')
         self.is_discharging = re.compile(r'.*dis.*')
+        self.find_time_left = re.compile(r'.+(\d\d:\d\d:\d\d).+')
         self.check_event = RecurringFunctionCallEvent(self.noteo,
                                                       self.check_battery,
                                                       self.config['pollInterval']
@@ -39,17 +40,23 @@ class BatteryCheck(NoteoModule):
     def get_status(self):
         percentage = 100
         charging = False
+        time_left = ''
         status = commands.getoutput('acpi')
         if self.find_percentage.match(status):
             percentage = int(self.find_percentage.match(status).groups()[0])
         if not self.is_discharging.match(status):
             charging = True
-        return (percentage, charging)
+        if self.find_time_left.match(status):
+            time_left = self.find_time_left.match(status).groups()[0]
+        return (percentage, charging, time_left)
 
     def report_current_status(self):
-        percentage, charging = self.get_status()
+        percentage, charging, time_left = self.get_status()
         summary = 'Battery at %s%%' % percentage
         message = 'Battery is currently %s' % ('charging' if charging else 'discharging')
+        if time_left:
+            message += "\n%s" % time_left
+            message += (' until charged' if charging else ' remaining')
         notification = NotificationEvent(self.noteo,
                                          0,
                                          summary,
@@ -60,7 +67,7 @@ class BatteryCheck(NoteoModule):
 
     def check_battery(self):
         self.noteo.logger.debug("Current state is %s %s" % self.state)
-        percentage, charging = self.get_status()
+        percentage, charging, time_left = self.get_status()
         if charging:
             self.notified_low = False
             self.notified_critical = False
