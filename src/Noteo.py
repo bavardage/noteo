@@ -325,7 +325,6 @@ class Noteo:
 		config_spec = {
 			'localmodules': 'list(default=list(\'\'))',
 			'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup))',
-			'threadGTK': 'boolean(default=False)',
 			'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
 			}
 		config_path = os.path.join(Noteo.config_dir, 'Noteo')
@@ -418,18 +417,12 @@ class Noteo:
 			self.logger.warning("pygtk is not installed, therefore no gtk support")
 			return
 		if not self.gtk_is_required:
-			if self.config['threadGTK']:
-				from threading import Timer
-				gtk.gdk.threads_init()
-				t = Timer(0.1, gtk.main)
-				t.start()
-			else:
-				self.logger.debug("Not already set-up. Setting up...")
-				event = RecurringFunctionCallEvent(
-					self,
-					self.gtk_update,
-					0.1)
-				self.add_event_to_queue(event)
+			self.logger.debug("Not already set-up. Setting up...")
+			event = RecurringFunctionCallEvent(
+				self,
+				self.gtk_update,
+				0.1)
+			self.add_event_to_queue(event)
 		self.gtk_is_required = True
 
 	def gtk_update(self):
