@@ -1,6 +1,6 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
 pkgname=noteo
-pkgver=0.1.3
+pkgver=0.1.4
 pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
