@@ -324,7 +324,7 @@ class Noteo:
 			pass
 		config_spec = {
 			'localmodules': 'list(default=list(\'\'))',
-			'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup))',
+			'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup, PacmanCheck))',
 			'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
 			}
 		config_path = os.path.join(Noteo.config_dir, 'Noteo')
