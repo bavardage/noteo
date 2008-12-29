@@ -23,19 +23,19 @@ class MPD(NoteoModule):
                                                        self.update, 
                                                        self.config['pollInterval']
                                                        )
-        self.noteo.add_event_to_queue(self.update_event)
+        self.update_event.add_to_queue()
         notify_current_song_menu_item = CreateMenuItemEvent(self.noteo,
                                                             "Show current song",
                                                             self.notify_current_song,
                                                             icon='audio-x-generic'
                                                             )
-        self.noteo.add_event_to_queue(notify_current_song_menu_item)
+        notify_current_song_menu_item.add_to_queue()
 
     def notify_current_song(self):
         summary = 'Track changed'
         content = '\n'.join([self.currentsong[key] for key in ('title', 'artist', 'album') if key in self.currentsong])
         notification = NotificationEvent(self.noteo, 0, summary, content, "audio-x-generic")
-        self.noteo.add_event_to_queue(notification)
+        notification.add_to_queue()
 
     def update(self):
         try:
@@ -46,7 +46,7 @@ class MPD(NoteoModule):
                                                               self.reconnect,
                                                               self.config['timeBetweenReconnectionAttempts'],
                                                               )
-            self.noteo.add_event_to_queue(self.reconnect_event)
+            self.reconnect_event.add_to_queue()
             return False
         if self.currentsong != self.lastsong:
             self.notify_current_song()
@@ -62,7 +62,7 @@ class MPD(NoteoModule):
             self.client.connect(self.config['host'], self.config['port'])
             self.noteo.debug("Reconnected to MPD")
             self.update_event = RecurringFunctionCallEvent(self.noteo, self.upate, self.config['pollInterval'])
-            self.noteo.add_event_to_queue(self.update_event)
+            self.update_event.add_to_queue()
             return False
         except:
             return True #try again

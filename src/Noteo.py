@@ -70,6 +70,10 @@ class Event(object):
 		self.noteo = noteo
 		self.time = time.time() + due_in
 		self.event_id = id(self)
+
+	def add_to_queue(self):
+		self.noteo.add_event_to_queue(self)
+
 	def handle(self):
 		pass
 

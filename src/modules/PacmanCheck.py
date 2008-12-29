@@ -14,7 +14,7 @@ class PacmanCheck(NoteoModule):
                                                       self.check,
                                                       self.config['pollInterval']
                                                       )
-        self.noteo.add_event_to_queue(self.check_event)
+        self.check_event.add_to_queue()
 
     def check(self):
         status = commands.getoutput('pacman -Qu')
@@ -35,7 +35,7 @@ class PacmanCheck(NoteoModule):
                                              message,
                                              'package-upgrade',
                                              )
-            self.noteo.add_event_to_queue(notification)
+            notification.add_to_queue()
         return True
 
 module = PacmanCheck

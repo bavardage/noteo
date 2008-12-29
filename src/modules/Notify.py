@@ -44,7 +44,7 @@ class Notify(NoteoModule):
                 handled=self.popup_destroyed
                 )
             self._notifications[notification] = (id if id is not None else self.get_id())
-            self.noteo.add_event_to_queue(notification)
+            notification.add_to_queue()
             return self._notifications[notification]
 
     def replace_notification(self, **kwargs):

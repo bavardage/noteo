@@ -88,22 +88,21 @@ class IMAPChecker(NoteoModule):
                                                        self.check,
                                                        self.config['checkInterval']
                                                        )
-        self.noteo.add_event_to_queue(self.update_event)
+        self.update_event.add_to_queue()
                                                        
 
     def check(self):
         data = self.mails.get_unread(self.config['checkOverSSL'])
         if len(data) > 0:
-            self.noteo.add_event_to_queue(
-                NotificationEvent(self.noteo,
-                                  0,
-                                  "You have new messages",
-                                  "%i new message%s on %s" % (
-                        len(data), ("s" if len(data) > 1 else ""),
-                        self.config['username']),
-                                  'dialog-info'
-                                  )
-                )
+            NotificationEvent(self.noteo,
+                              0,
+                              "You have new messages",
+                              "%i new message%s on %s" % (
+                    len(data), ("s" if len(data) > 1 else ""),
+                    self.config['username']),
+                              'dialog-info'
+                              )
+            ).add_to_queue()
         return True
 
 module = IMAPChecker

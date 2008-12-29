@@ -12,13 +12,13 @@ class Xmms2(NoteoModule):
                                                        self.update,
                                                        self.config['pollInterval']
                                                        )
-        self.noteo.add_event_to_queue(self.update_event)
+        self.update_event.add_to_queue()
         notify_current_song_menu_item = CreateMenuItemEvent(self.noteo,
                                                             "Show current song",
                                                             self.notify_current_song,
                                                             icon='audio-x-generic'
                                                             )
-        self.noteo.add_event_to_queue(notify_current_song_menu_item)
+        notify_current_song_menu_item.add_to_queue()
 
     def get_current_song(self):
         return commands.getoutput("xmms2 current")
@@ -30,7 +30,7 @@ class Xmms2(NoteoModule):
                                              self.current_song,
                                              'audio-x-generic'
                                              )
-        self.noteo.add_event_to_queue(notification)
+        notification.add_to_queue()
 
     def update(self):
         self.last_song = self.current_song

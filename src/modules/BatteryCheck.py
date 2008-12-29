@@ -28,14 +28,14 @@ class BatteryCheck(NoteoModule):
                                                       self.check_battery,
                                                       self.config['pollInterval']
                                                       )
-        self.noteo.add_event_to_queue(self.check_event)
+        self.check_event.add_to_queue()
 
         menu_item = CreateMenuItemEvent(self.noteo,
                                         "Current battery status",
                                         self.report_current_status,
                                         icon='battery'
                                         )
-        self.noteo.add_event_to_queue(menu_item)
+        menu_item.add_to_queue()
 
     def get_status(self):
         percentage = 100
@@ -63,7 +63,7 @@ class BatteryCheck(NoteoModule):
                                          message,
                                          ('gpm-ac-adapter' if charging else 'battery'),
                                          )
-        self.noteo.add_event_to_queue(notification)
+        notification.add_to_queue()
 
     def check_battery(self):
         self.noteo.logger.debug("Current state is %s %s" % self.state)
@@ -78,7 +78,7 @@ class BatteryCheck(NoteoModule):
                                                  "AC power has been plugged in",
                                                  'gpm-ac-adapter'
                                                  )
-                self.noteo.add_event_to_queue(notification)
+                notification.add_to_queue()
             self.noteo.logger.debug("Previously was %s, now %s" %
                                     (self.state[1], charging))
         else:
@@ -91,7 +91,7 @@ class BatteryCheck(NoteoModule):
                                                  "Battery charge is only %s%%" % percentage,
                                                  'battery'
                                                  )
-                self.noteo.add_event_to_queue(notification)
+                notification.add_to_queue()
             elif percentage < self.config['lowPercentage'] \
                     and not self.notified_low:
                 self.notified_low = True
@@ -101,7 +101,7 @@ class BatteryCheck(NoteoModule):
                                                  "Battery charge is at %s%%" % percentage,
                                                  'battery'
                                                  )
-                self.noteo.add_event_to_queue(notification)
+                notification.add_to_queue()
         self.noteo.logger.debug("Setting status to percentage: %s, charging %s" %
                          (percentage, charging))
         self.state = (percentage, charging)

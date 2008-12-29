@@ -17,7 +17,7 @@ class DirectoryWatcher(NoteoModule):
                                                        self.check,
                                                        self.config['pollInterval']
                                                        )
-        self.noteo.add_event_to_queue(self.update_event)
+        self.update_event.add_to_queue()
         for directory in self.config['directories']:
             self.items[directory] = self.get_items_in(directory)
 
@@ -61,7 +61,7 @@ class DirectoryWatcher(NoteoModule):
                         message,
                         'stock_folder'
                         ))
-        self.noteo.add_events_to_queue(notifications)
+        self.noteo.add_events_to_queue(notifications) #add multiple events to the queue
         return True
 
 module = DirectoryWatcher

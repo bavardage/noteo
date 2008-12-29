@@ -30,7 +30,7 @@ class Popup(NoteoModule):
             popup_timeout,
             self.popup_expired_for_event, 
             event)
-        self.noteo.add_event_to_queue(destroy_popup_event)
+        destroy_popup_event.add_to_queue()
         self.position_popup_for_event(event)
         
     def event_is_invalid(self, event):

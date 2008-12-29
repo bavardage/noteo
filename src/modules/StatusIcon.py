@@ -39,6 +39,6 @@ class StatusIcon(NoteoModule):
 
     def quit(self, *args):
         quit_event = QuitEvent(self.noteo, 1) #quit in one second
-        self.noteo.add_event_to_queue(quit_event)
+        quit_event.add_to_queue()
     
 module = StatusIcon

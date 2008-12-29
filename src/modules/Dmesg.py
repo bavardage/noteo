@@ -12,7 +12,7 @@ class Dmesg(NoteoModule):
                                                       self.check,
                                                       self.config['pollInterval']
                                                       )
-        self.noteo.add_event_to_queue(self.check_event)
+        self.check_event.add_to_queue()
     
     def get_items(self):
         return commands.getoutput("dmesg | tail").split("\n")

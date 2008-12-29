@@ -14,19 +14,19 @@ class GmailCheck(NoteoModule):
                                                   self.check, 
                                                   self.config['checkInterval']
                                                   )
-        self.noteo.add_event_to_queue(self.update_event)
+        self.update_event.add_to_queue()
         self.login_event = FunctionCallEvent(self.noteo,
                                              1,
                                              self.login
                                              )
-        self.noteo.add_event_to_queue(self.login_event)
+        self.login_event.add_to_queue()
         
         check_mail_menu_item = CreateMenuItemEvent(self.noteo,
                                                    "Check mail now",
                                                    self.check,
                                                    icon='stock_mail'
                                                    )
-        self.noteo.add_event_to_queue(check_mail_menu_item)
+        check_mail_menu_item.add_to_queue()
 
     def check(self):
         self.noteo.logger.debug("Checking mail...")
@@ -47,7 +47,7 @@ class GmailCheck(NoteoModule):
                                                  content,
                                                  'dialog-info'
                                                  )
-                self.noteo.add_event_to_queue(notification)
+                notification.add_to_queue()
         return True
         
     def login(self):
