@@ -41,6 +41,10 @@ class Popup(NoteoModule):
         event.handled(event)
 
     def create_popup(self, summary, content, icon):
+
+        summary = summary.replace('&', '&amp;')
+        content = content.replace('&', '&amp;')
+
         popup = gtk.Window(gtk.WINDOW_POPUP)
         max_chars = self.config['maxCharsPerLine']
         
