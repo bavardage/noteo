@@ -33,7 +33,7 @@ class PacmanCheck(NoteoModule):
                                              0,
                                              summary,
                                              message,
-                                             'package-upgrade',
+                                             'system',
                                              )
             notification.add_to_queue()
         return True
