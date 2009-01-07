@@ -55,7 +55,10 @@ class DesktopDisplay(NoteoModule):
         self.vbox.show_all()
 
         #scroll to bottom
-        adjustment = self.scrolled.get_vadjustment()
-        adjustment.set_value(adjustment.upper)
+        try:
+            adjustment = self.scrolled.get_vadjustment()
+            adjustment.set_value(adjustment.upper)
+        except:
+            self.noteo.logger.debug("Couldn't scroll to bottom for some reason")
         
 module = DesktopDisplay
