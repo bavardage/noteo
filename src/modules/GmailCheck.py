@@ -67,6 +67,7 @@ class GmailCheck(NoteoModule):
                 self.noteo.logger.error("Incorrect username/password")
             except urllib2.URLError:
                 self.noteo.logger.warning("Trying to retrieve email whilst not connected to internet")
+                gmail_accounts = None
         self.gmail_accounts = gmail_accounts
             
 module = GmailCheck
