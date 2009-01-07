@@ -1,4 +1,5 @@
 import libgmail
+import urllib2
 
 from Noteo import *
 
@@ -64,6 +65,8 @@ class GmailCheck(NoteoModule):
                 account.login()
             except libgmail.GmailLoginFailure:
                 self.noteo.logger.error("Incorrect username/password")
+            except urllib2.URLError:
+                self.noteo.logger.warning("Trying to retrieve email whilst not connected to internet")
         self.gmail_accounts = gmail_accounts
             
 module = GmailCheck
