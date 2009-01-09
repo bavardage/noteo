@@ -16,6 +16,18 @@ class DesktopDisplay(NoteoModule):
         self.init_gui()
         self.position_window()
 
+        menu_item = CreateMenuItemEvent(self.noteo,
+                                        "Re-show desktop display",
+                                        self.show_desktop_display,
+                                        icon='desktop'
+                                        )
+        menu_item.add_to_queue()
+
+    def show_desktop_display(self):
+        self.init_gui()
+        self.position_window()
+                                 
+
     def init_gui(self):
         self.window = gtk.Window()
         self.window.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_DESKTOP)
