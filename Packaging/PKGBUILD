@@ -1,6 +1,6 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
 pkgname=noteo
-pkgver=0.1.4
+pkgver=0.1.5
 pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
@@ -15,10 +15,8 @@ provides=("notification-daemon")
 replaces=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
 conflicts=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
 source=("http://noteo.googlecode.com/files/${pkgname}-${pkgver}.tar.gz")
-md5sums=('1602382f5b6b54853b7feaa100544081')
-
+md5sums=('34288f1e2f66d03e459e0bf3236f5efa')
 build() {
   cd $startdir/src/"$pkgname-$pkgver"
   python setup.py install --prefix=/usr --root="$startdir/pkg"
 }
-
