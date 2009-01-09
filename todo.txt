@@ -1,5 +1,5 @@
 BUGFIXES
-need to make gmail die gracefully when no http connection
+DONE need to make gmail die gracefully when no http connection
 
 
 
@@ -38,7 +38,7 @@ push
 
 
 Watch folder
- - make a watch folder plugin
+DONE - make a watch folder plugin
 
 Fogobogo
  - add him to credits
@@ -57,4 +57,8 @@ just make events add themselves
 not reason not to...........
 
 ALSO
-make a decorator for menu items!?
+make a decorator for menu items!? bleh a tad too tricky if you ask me :P
+
+
+PER EVARYONT'S REQUEST
+add urgency levels to notifications (default to 1, normal)
