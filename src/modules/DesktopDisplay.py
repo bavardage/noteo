@@ -53,7 +53,8 @@ class DesktopDisplay(NoteoModule):
         message = event.get_content()
         icon = event.get_icon()
 
-        label = gtk.Label(summary + "\n" + message)
+        label = gtk.Label()
+        label.set_markup(summary + "\n" + message)
         label.set_line_wrap(True)
         label.set_width_chars(self.config['maxCharsPerLine'])
         if icon and self.config['showIcons']:
