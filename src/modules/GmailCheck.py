@@ -33,22 +33,25 @@ class GmailCheck(NoteoModule):
         self.noteo.logger.debug("Checking mail...")
         if self.gmail_accounts is None:
             self.login()
-        for account in self.gmail_accounts:
-            try:
-                unread = account.getUnreadMessages()
-            except:
-                unread = []
-                self.gmail_accounts = None
-            for message in unread:
-                summary = "New message on %s" % account.name
-                content = message.subject
-                notification = NotificationEvent(self.noteo,
-                                                 0,
-                                                 summary,
-                                                 content,
-                                                 'dialog-info'
-                                                 )
-                notification.add_to_queue()
+        try:
+            for account in self.gmail_accounts:
+                try:
+                    unread = account.getUnreadMessages()
+                except:
+                    unread = []
+                    self.gmail_accounts = None
+                    for message in unread:
+                        summary = "New message on %s" % account.name
+                        content = message.subject
+                        notification = NotificationEvent(self.noteo,
+                                                         0,
+                                                         summary,
+                                                         content,
+                                                         'dialog-info'
+                                                         )
+                        notification.add_to_queue()
+        except:
+            self.gmail_accounts = None
         return True
         
     def login(self):
