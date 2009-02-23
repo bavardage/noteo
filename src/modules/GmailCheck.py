@@ -1,5 +1,6 @@
 import libgmail
 import urllib2
+import sys
 
 from Noteo import *
 
@@ -40,17 +41,18 @@ class GmailCheck(NoteoModule):
                 except:
                     unread = []
                     self.gmail_accounts = None
-                    for message in unread:
-                        summary = "New message on %s" % account.name
-                        content = message.subject
-                        notification = NotificationEvent(self.noteo,
-                                                         0,
-                                                         summary,
-                                                         content,
-                                                         'dialog-info'
-                                                         )
-                        notification.add_to_queue()
+                for message in unread:
+                    summary = "New message on %s" % account.name
+                    content = message.subject
+                    notification = NotificationEvent(self.noteo,
+                                                     0,
+                                                     summary,
+                                                     content,
+                                                     'dialog-info'
+                                                     )
+                    notification.add_to_queue()
         except:
+            self.noteo.logger.error("Exception when checking mail: %s" % sys.exc_info())
             self.gmail_accounts = None
         return True
         
@@ -60,6 +62,7 @@ class GmailCheck(NoteoModule):
             try:
                 username = self.config['usernames'][i]
                 password = self.config['passwords'][i]
+                self.noteo.logger.debug("Logging into gmail account %s" % username)
                 gmail_accounts.append(libgmail.GmailAccount(username, password))
             except:
                 pass
