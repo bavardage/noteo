@@ -3,8 +3,9 @@
 import dbus
 import dbus.service
 import dbus.mainloop.glib
-import gtk, gobject
+import gtk, gobject, gtk.gdk
 import time
+import sys
 
 from Noteo import *
 
@@ -34,12 +35,34 @@ class Notify(NoteoModule):
                 timeout = self.config['defaultTimeout']
             else:
                 timeout = kwargs['expire']/1000 #convert from millis to secs
+            if 'icon_data' in kwargs['hints']:
+                icon_data = kwargs['hints']['icon_data']
+                (width, height, rowstride, has_alpha,
+                 bps, channels, data) = icon_data
+                try:
+                    data = "".join(data)
+                    icon = gtk.gdk.pixbuf_new_from_data(
+                        data, 
+                        gtk.gdk.COLORSPACE_RGB, 
+                        has_alpha, 
+                        bps, 
+                        width, 
+                        height, 
+                        rowstride
+                        )
+                except:
+                    icon = kwargs['icon']
+                    self.noteo.logger.error(
+                        "Error creating pixbuf %s" % ",".join(sys.exc_info())
+                        )
+            else:
+                icon = kwargs['icon']
             notification = NotificationEvent(
                 self.noteo,
                 0,
                 kwargs['summary'],
                 kwargs['content'],
-                kwargs['icon'],
+                icon,
                 timeout,
                 handled=self.popup_destroyed
                 )
@@ -77,8 +100,9 @@ class NotificationDaemon(dbus.service.Object):
         self.session_bus = session_bus
 
     @dbus.service.method("org.freedesktop.Notifications", 
-                             in_signature='susssasa{ss}i',
-                             out_signature='u')
+                         in_signature='susssasa{ss}i',
+                         out_signature='u',
+                         byte_arrays=True)
     def Notify(self, app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout):
         return self.notify.notification_received(
             app_name=app_name,
@@ -110,7 +134,5 @@ dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 session_bus = dbus.SessionBus()
 name = dbus.service.BusName("org.freedesktop.Notifications", session_bus)
 #object = NotificationDaemon(session_bus, '/org/freedesktop/Notifications')
-
-print object
 
 module=Notify
