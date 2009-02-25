@@ -1,4 +1,5 @@
 import gtk
+import re
 
 from Noteo import *
 
@@ -42,9 +43,14 @@ class Popup(NoteoModule):
 
     def create_popup(self, summary, content, icon):
 
-        summary = summary.replace('&', '&amp;')
-        content = content.replace('&', '&amp;')
+        replace_amp = re.compile(u'&(?![a-zA-Z]{1,8};)')
 
+        while re.findall(replace_amp, summary):
+            summary = re.sub(replace_amp, "&amp;", summary)
+
+        while re.findall(replace_amp, content):
+            content = re.sub(replace_amp, "&amp;", content)
+ 
         popup = gtk.Window(gtk.WINDOW_POPUP)
         max_chars = self.config['maxCharsPerLine']
         
