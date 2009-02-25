@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgver=0.1.5
+pkgver=0.1.6
 
 cp -r ../src noteo-"$pkgver"
 
