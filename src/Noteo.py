@@ -52,7 +52,9 @@ def get_icon(icon, size=64):
 	returns a gtk.gdk.Pixbuf if an icon can be found, or None otherwise'''
 	if NO_GTK:
 		return None
-	if isinstance(icon, gtk.gdk.Pixbuf):
+	elif icon is None:
+		return None
+	elif isinstance(icon, gtk.gdk.Pixbuf):
 		return icon
 	elif os.path.exists(icon):
 		return gtk.gdk.pixbuf_new_from_file_at_size(icon, size, size)
