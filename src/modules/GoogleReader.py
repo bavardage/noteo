@@ -148,5 +148,6 @@ class GoogleReader(NoteoModule):
                                          self.icon,
                                          )
         notification.add_to_queue()
+        return True
                               
 module = GoogleReader
