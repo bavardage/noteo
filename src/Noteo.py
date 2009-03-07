@@ -28,6 +28,14 @@ except:
 	print "Don't be surprised when your gtk-wanting modules go \"oh noes\""
 	NO_GTK = True
 
+try:
+	from PyQt4 import QtGui, QtCore
+	NO_PYQT = False
+except:
+	print "Warning: No QT4 support."
+	print "Don't be surprised when your gtk-hating modules go \"you fail\""
+	NO_PYQT = True
+
 from configobj import ConfigObj
 from validate import Validator
 
@@ -204,6 +212,7 @@ class QuitEvent(Event):
 	def handle(self):
 		try:
 			gtk.main_quit()
+			#gotta find out how to tell QT to stfu and quit
 		except:
 			pass
 		sys.exit(0)
@@ -308,6 +317,8 @@ class Noteo:
 	event_timer = None
 	#gtk
 	gtk_is_required = False
+	#qt
+	qt_is_required = False
 	#module, paths, etc
 	local_module_dir = os.path.expandvars('$HOME/.noteo')
 	module_dir = '/usr/share/noteo/modules/'
@@ -434,6 +445,25 @@ class Noteo:
 	def gtk_update(self):
 		while gtk.events_pending():
 			gtk.main_iteration()
+		return True
+	
+	def qt_required(self):
+		self.logger.debug("QT4 is required")
+		self.logger.debug("Already required? %s" % self.qt_is_required)
+		if NO_PYQT:
+			self.logger.warning("pyqt4 is not installed, therefore no qt support")
+			return
+		if not self.qt_is_required:
+			self.logger.debug("Not already set-up. Setting up...")
+			event = RecurringFunctionCallEvent(
+				self,
+				self.qt_update,
+				0.1)
+			self.add_event_to_queue(event)
+		self.qt_is_required = True
+
+	def qt_update(self):
+		QtGui.qApp.processEvents()
 		return True
 		
 
