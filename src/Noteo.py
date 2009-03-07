@@ -454,7 +454,8 @@ class Noteo:
 			self.logger.warning("pyqt4 is not installed, therefore no qt support")
 			return
 		if not self.qt_is_required:
-			self.logger.debug("Not already set-up. Setting up...")
+			self.logger.debug("Not already set-up. Setting up...")	
+			self.qt_app = QtGui.QApplication(sys.argv)
 			event = RecurringFunctionCallEvent(
 				self,
 				self.qt_update,
