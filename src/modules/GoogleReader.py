@@ -3,6 +3,7 @@ import urllib
 import urllib2
 import os.path
 import re
+import sys
 from xml.etree.ElementTree import XMLTreeBuilder
 
 from Noteo import *
@@ -39,9 +40,9 @@ class GoogleReaderAPI:
             result = f.read()
             self.sid = re.search('SID=(\S*)', result).group(1)
         except:
-            self.error("Error logging in")
+            self.error("Error logging in" + str(sys.exc_info()))
             self.sid = None
-            raise
+            
     
     def get_results(self, url):
         if not self.sid:
@@ -57,7 +58,7 @@ class GoogleReaderAPI:
             return f.read()
         except:
             self.error("Error getting data")
-            raise
+            self.sid = None
             return None
 
     def get_unread(self):
@@ -68,6 +69,8 @@ class GoogleReaderAPI:
     def get_subscriptions(self):
         url = self.urls['reader'] + self.urls['subscription-list']
         data = self.get_results(url)
+        if data is None:
+            return
         tree = XMLTreeBuilder()
         tree.feed(data)
         root_object = tree.close()
@@ -82,6 +85,8 @@ class GoogleReaderAPI:
     def get_unread_count(self):
         url = self.urls['reader'] + self.urls['unread-count']
         data = self.get_results(url)
+        if data is None:
+            return
         tree = XMLTreeBuilder()
         tree.feed(data)
         root_object = tree.close()
@@ -121,8 +126,8 @@ class GoogleReader(NoteoModule):
         self.noteo.logger.error("Google Reader Errored: %s" % error)
 
     def check(self):
-        feeds = self.client.get_subscriptions()
-        unread = self.client.get_unread_count()
+        feeds = self.client.get_subscriptions() or {}
+        unread = self.client.get_unread_count() or []
         total_unread = 0
         items = []
         for feedid, count, timestamp in unread:
@@ -141,13 +146,13 @@ class GoogleReader(NoteoModule):
                                                                    count,
                                                                    plural(count)
                                                                    )
-        notification = NotificationEvent(self.noteo,
-                                         0,
-                                         summary,
-                                         markup,
-                                         self.icon,
-                                         )
-        notification.add_to_queue()
+            notification = NotificationEvent(self.noteo,
+                                             0,
+                                             summary,
+                                             markup,
+                                             self.icon,
+                                             )
+            notification.add_to_queue()
         return True
                               
 module = GoogleReader
