@@ -24,7 +24,7 @@ class Popup(NoteoModule):
             event.get_content(),
             event.get_icon()
             )
-        popup_timeout = 5
+        popup_timeout = self.config['defaultTimeout']
         if event.get_timeout() > 0:
             popup_timeout = event.get_timeout()
         destroy_popup_event = FunctionCallEvent(
