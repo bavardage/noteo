@@ -76,8 +76,8 @@ class Notify(NoteoModule):
             if i == kwargs['replaces_id']:
                 found = k
         if found is not None:
-            self.noteo.invalidate_event(found)
-        del self._notifications[found]
+            self.noteo.invalidate_to_modules(found)
+            del self._notifications[found]
         ri = kwargs['replaces_id']
         kwargs['replaces_id'] = 0
         return self.notification_received(id=ri, **kwargs)
@@ -119,6 +119,11 @@ class NotificationDaemon(dbus.service.Object):
                          in_signature='', out_signature='as')
     def GetCapabilities(self):
         return ("body", "body-markup")
+
+    @dbus.service.method("org.freedesktop.Notifications",
+                         in_signature='', out_signature='ssss')
+    def GetServerInformation(self):
+        return ("Notification Daemon", "Noteo", "0", "0")
     
     @dbus.service.signal("org.freedesktop.Notifications",
                          signature='uu')
