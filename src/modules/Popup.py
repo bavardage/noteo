@@ -31,9 +31,9 @@ class Popup(NoteoModule):
         if event.get_timeout() > 0:
             popup_timeout = event.get_timeout()
         destroy_popup_event = FunctionCallEvent(
-            self.noteo, 
+            self.noteo,
             popup_timeout,
-            self.popup_expired_for_event, 
+            self.popup_expired_for_event,
             event)
         destroy_popup_event.add_to_queue()
         self.position_popup_for_event(event)
@@ -90,9 +90,15 @@ class Popup(NoteoModule):
         return popup
 
     def destroy_popup_for_event(self, event):
+        sign = 1 if self.config['verticalArrangement'] == 'ascending' else -1
         if event in self._popups:
             popup = self._popups.pop(event)
+            w, h = popup.get_size()
             popup.destroy()
+            for e,p in self._popups.items():
+                if e > event:
+                    x, y = p.get_position()
+                    p.move(x, y + (sign * h))
             return True
         else:
             return False
@@ -107,13 +113,13 @@ class Popup(NoteoModule):
         self.noteo.logger.debug("Positioning window of size (%s, %s)" % (width, height))
         popup_x, popup_y = xoffset, 0
         if vertical_arrangement == 'descending':
-            greatest_height = yoffset - intermediateoffset
+            greatest_height = yoffset - vertical_spacing
             for e, p in self._popups.items():
                 w,h = p.get_size()
                 x, y = p.get_position()
                 if (e is not event) and y + h > greatest_height:
                     greatest_height = y + h
-            popup_y = greatest_height + verticalSpacing
+            popup_y = greatest_height + vertical_spacing
         else:
             smallest_height = gtk.gdk.screen_height() - yoffset + vertical_spacing
             for e,p in self._popups.items():
