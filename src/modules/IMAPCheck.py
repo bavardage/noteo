@@ -166,7 +166,7 @@ class IMAPCheck(NoteoModule):
                                              0,
                                              summary,
                                              content,
-                                             'dialog-info')
+                                             'mail_new')
             notification.add_to_queue()
         return True
 
