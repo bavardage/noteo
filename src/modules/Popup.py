@@ -22,11 +22,7 @@ class Popup(NoteoModule):
         self._popups = {}
 
     def handle_NotificationEvent(self, event):
-        self._popups[event] = self.create_popup(
-            event.get_summary(),
-            event.get_content(),
-            event.get_icon()
-            )
+        self._popups[event] = self.create_popup(event)
         popup_timeout = self.config['defaultTimeout']
         if event.get_timeout() > 0:
             popup_timeout = event.get_timeout()
@@ -45,10 +41,13 @@ class Popup(NoteoModule):
         self.destroy_popup_for_event(event)
         event.handled(event)
 
-    def button_press_event(self, *args):
-        print("press", args)
+    def button_press_event(self, window, gdk_event,  event):
+        self.noteo.invalidate_to_modules(event)
 
-    def create_popup(self, summary, content, icon):
+    def create_popup(self, event):
+        summary = event.get_summary()
+        content = event.get_content()
+        icon = event.get_icon()
 
         replace_amp = re.compile(u'&(?![a-zA-Z]{1,8};)')
 
@@ -62,7 +61,7 @@ class Popup(NoteoModule):
         max_chars = self.config['maxCharsPerLine']
         popup.set_opacity(self.config['opacity'])
         # Event signals
-        popup.connect("button_press_event", self.button_press_event, "asd")
+        popup.connect("button_press_event", self.button_press_event, event)
         popup.set_events(gtk.gdk.BUTTON_PRESS_MASK) # ) | gtk.gdk.POINTER_MOTION_MASK | gtk.gdk.POINTER_MOTION_HINT_MASK)
 
 
