@@ -76,7 +76,6 @@ class BatteryCheck(NoteoModule):
 
 
     def check_battery(self):
-        print("Current state is %s %s" % self.state)
         self.noteo.logger.debug("Current state is %s %s" % self.state)
         percentage, charging, time_left = self.get_status()
         if self.state[1] is not None and \
