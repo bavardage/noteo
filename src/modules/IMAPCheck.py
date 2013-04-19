@@ -92,6 +92,7 @@ class MailTracker:
 class IMAPCheck(NoteoModule):
     config_spec = {
         'checkInterval': 'float(default=120)',
+        'notificationTimeout': 'float(default=10)',
         'linesOfContent': 'integer(default=2)',
         'username': 'list(default=list(username1, username2))',
         'password': 'list(default=list(password1, password2))',
@@ -102,9 +103,9 @@ class IMAPCheck(NoteoModule):
     }
     connections = None
 
-    header_line = '<span foreground=\"white\" size=\"large\"><b>You have <span foreground=\"red\">%d</span> new message%s (%s@%s)</b></span>\n'
+    header_line = '<span size=\"large\"><b>You have <span foreground=\"red\">%d</span> new message%s (%s@%s)</b></span>\n'
     from_line = '<b>From: %s</b>\n'
-    subject_line = '<b>Subject: %s</b>\n'
+    subject_line = 'Subject: %s\n'
     def init(self):
         self.update_event = RecurringFunctionCallEvent(self.noteo,
                                                        self.check,
@@ -166,7 +167,8 @@ class IMAPCheck(NoteoModule):
                                              0,
                                              summary,
                                              content,
-                                             'mail_new')
+                                             'mail_new',
+                                             timeout=self.config['notificationTimeout'])
             notification.add_to_queue()
         return True
 
