@@ -25,22 +25,34 @@ class Popup(NoteoModule):
         self._popups_ids = {}
         self._popups = []
 
+    def _popup_fade_event(self, window, timeout):
+            if timeout <= 0:
+                timeout = self.config['defaultTimeout']
+            event = FunctionCallEvent(self._fade_popup,
+                                      window)
+            event.delay = 3 * timeout / 4
+            event.recurring_delay = timeout / 400 # TODO: option for number of steps
+            self.noteo.add_event(event)
+            return event.event_id
+
     def _popup_destroy_event(self, event_id, timeout):
             if timeout <= 0:
                 timeout = self.config['defaultTimeout']
-            destroy_popup_event = FunctionCallEvent(self.noteo.invalidate_event,
+            event = FunctionCallEvent(self.noteo.invalidate_event,
                                                     event_id)
-            destroy_popup_event.delay = timeout
-            self.noteo.add_event(destroy_popup_event)
-            return destroy_popup_event.event_id
+            event.delay = timeout
+            self.noteo.add_event(event)
+            return event.event_id
 
     def handle_NotificationEvent(self, event):
         with self._lock:
-            destroy_event_id = self._popup_destroy_event(event.event_id, event.get_timeout())
-
             window = self._create_popup(event)
-            self._popups_ids[event.event_id] = window
-            self._popups.append([window, destroy_event_id])
+
+            destroy_event_id = self._popup_destroy_event(event.event_id, event.get_timeout())
+            fade_event_id = self._popup_fade_event(window, event.get_timeout())
+
+            self._popups_ids[event.event_id] = [window, destroy_event_id, fade_event_id]
+            self._popups.append(window)
             self._arrange_notifications()
 
     def replace_event(self, event_id, event):
@@ -48,23 +60,29 @@ class Popup(NoteoModule):
             if event_id in self._popups_ids:
                 popup = self._popups_ids.pop(event_id)
                 for i in range(len(self._popups)):
-                    if self._popups[i][0] is popup:
-                        self.noteo.invalidate_event(self._popups[i][1])
+                    if self._popups[i] is popup[0]:
                         window = self._create_popup(event)
                         destroy_event_id = self._popup_destroy_event(event.event_id, event.get_timeout())
-                        self._popups_ids[event.event_id] = window
-                        self._popups[i] = [window, destroy_event_id]
+                        fade_event_id = self._popup_fade_event(window, event.get_timeout())
+                        self._popups_ids[event.event_id] = [window, destroy_event_id, fade_event_id]
+                        self._popups[i] = window
                         break
-                popup.destroy()
+                popup[0].destroy()
+                self.noteo.invalidate_event(popup[1])
+                self.noteo.invalidate_event(popup[2])
                 self._arrange_notifications()
 
     def invalidate_event(self, event_id):
         with self._lock:
             if event_id in self._popups_ids:
                 popup = self._popups_ids.pop(event_id)
-                self._popups = [p for p in self._popups if p[0] is not popup]
-                popup.destroy()
+                self._popups = [p for p in self._popups if p is not popup[0]]
+                popup[0].destroy()
+                self.noteo.invalidate_event(popup[2])
                 self._arrange_notifications()
+
+    def _fade_popup(self, window):
+        window.set_opacity(window.get_opacity() - 0.01)
 
     def _button_press_event(self, window, gdk_event,  event_id):
         self.noteo.invalidate_event(event_id)
@@ -143,13 +161,13 @@ class Popup(NoteoModule):
 
         x, y = self._base_position()
         if start:
-            popup = self._popups[start][0]
+            popup = self._popups[start]
             _, y = popup.get_position()
             _, h = popup.get_size()
             y = y + (add_height * h)
 
         for n in range(start, len(self._popups)):
-            popup = self._popups[n][0]
+            popup = self._popups[n]
             w, h = popup.get_size()
             popup.move(x + (add_width * w),
                        y + (add_height * h))
