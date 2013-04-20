@@ -45,9 +45,14 @@ class MailTracker:
         if retcode != 'OK':
             raise imaplib.IMAP4.error("Error return code: %s" % retcode)
 
-        (retcode, data) = conn.fetch(",".join(messages[0].split(' ')),'(UID)')
-        if retcode != 'OK':
-            raise imaplib.IMAP4.error("Error return code: %s" % retcode)
+        messages = messages[0].strip()
+        if len(messages):
+            messages = messages.split(' ')
+            (retcode, data) = conn.fetch(",".join(messages),'(UID)')
+            if retcode != 'OK':
+                raise imaplib.IMAP4.error("Error return code: %s" % retcode)
+        else:
+            data = []
 
         uid_extracter = re.compile(r'\d* \(UID (\d*)')
         unseen = set()
