@@ -1,13 +1,10 @@
 import email
-import threading
 from email.header import decode_header
-from xml.sax.saxutils import escape
-
-import time
 import imaplib
-import urllib2
 import re
-import sys
+import time
+import threading
+from xml.sax.saxutils import escape
 
 from Noteo import *
 
@@ -73,12 +70,12 @@ class MailTracker:
                     new = self._get_unseen_uids(conn)
 
                     for uid in new:
-                        retcode, data = conn.uid('FETCH', uid, '(BODY[HEADER.FIELDS (FROM SUBJECT)])')
+                        retcode, data = conn.uid('FETCH', uid, '(RFC822)')#BODY[HEADER.FIELDS (DATE FROM SUBJECT)] BODY[TEXT])')
                         if retcode != 'OK':
                             raise imaplib.IMAP4.error("Error return code: %s" % retcode)
-                        msg = email.message_from_string(data[0][1])
+                        content = email.message_from_string(data[0][1])
                         with self.lock:
-                            self._unread.append(msg)
+                            self._unread.append(content)
                         self.last_unseen.add(uid)
                     conn.close()
                     conn.logout()
@@ -129,6 +126,7 @@ class IMAPCheck(NoteoModule):
 
     def decode(self, string, join=" ", max_items=0, max_len=0):
         decoded_header = decode_header(string)
+
         content = []
         for line in decoded_header:
             max_items = max_items - 1
@@ -143,6 +141,29 @@ class IMAPCheck(NoteoModule):
             content.append(tmp)
         return join.join(content)
 
+    def clean_text(self, message):
+        if self.config['linesOfContent'] == 0:
+            return ""
+        content = ""
+        text = ""
+        for part in message.walk():
+            if part.get_content_type() == "text/plain":
+                text = part.get_payload(decode=True)
+                text = text.decode(part.get_content_charset('utf-8'))
+                break
+            elif part.get_content_type() == "text/html":
+                text = part.get_payload(decode=True)
+                text = text.decode(part.get_content_charset('utf-8'))
+                text = re.sub('<[^<]+?>', '', text)
+                text = re.sub('&[^;]*;', '', text)
+                break
+
+
+        text = text.replace('\r', '\n')
+        text = [x.strip() for x in text.split('\n') if len(x.strip())]
+        if len(text) > self.config['linesOfContent']:
+            text = text [:self.config['linesOfContent']]
+        return "\n".join(text)
 
     def check(self):
         self.noteo.logger.debug("Checking mail...")
@@ -166,7 +187,7 @@ class IMAPCheck(NoteoModule):
 
                 content += self.from_line % escape(_from[0])
                 content += self.subject_line % escape(_subject)
-                content += "\n"
+                content += "<i>%s</i>\n\n" % self.clean_text(message)
 
             notification = NotificationEvent(self.noteo,
                                              0,
