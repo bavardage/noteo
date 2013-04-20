@@ -1,5 +1,6 @@
 import gtk
 import re
+import threading
 
 from Noteo import *
 
@@ -9,42 +10,66 @@ class Popup(NoteoModule):
         'verticalArrangement': 'string(default=\'ascending\')',
         'horizontalArrangement': 'string(default=\'right\')',
         'opacity': 'float(default=0.8)',
-	'maxCharsPerLine': 'integer(default=30)',
+        'maxCharsPerLine': 'integer(default=30)',
         'xOffset': 'integer(default=0)',
         'yOffset': 'integer(default=30)',
-	'verticalSpacing': 'integer(default=2)',
-	'use-custom-colours': 'boolean(default=False)',
+        'verticalSpacing': 'integer(default=2)',
+        'use-custom-colours': 'boolean(default=False)',
         'fg-colour': 'string(default=\'#ffffff\')',
         'bg-colour': 'string(default=\'#131313\')',
         }
+
     def init(self):
+        self._lock = threading.RLock()
         self.noteo.gtk_required()
-        self._popups = {}
+        self._popups_ids = {}
+        self._popups = []
+
+    def _popup_destroy_event(self, event_id, timeout):
+            if timeout <= 0:
+                timeout = self.config['defaultTimeout']
+            destroy_popup_event = FunctionCallEvent(self.noteo.invalidate_event,
+                                                    event_id)
+            destroy_popup_event.delay = timeout
+            self.noteo.add_event(destroy_popup_event)
+            return destroy_popup_event.event_id
 
     def handle_NotificationEvent(self, event):
-        self._popups[event] = self.create_popup(event)
-        popup_timeout = self.config['defaultTimeout']
-        if event.get_timeout() > 0:
-            popup_timeout = event.get_timeout()
-        destroy_popup_event = FunctionCallEvent(
-            self.noteo,
-            popup_timeout,
-            self.popup_expired_for_event,
-            event)
-        destroy_popup_event.add_to_queue()
-        self.position_popup_for_event(event)
-        
-    def event_is_invalid(self, event):
-        self.destroy_popup_for_event(event)
+        with self._lock:
+            destroy_event_id = self._popup_destroy_event(event.event_id, event.get_timeout())
 
-    def popup_expired_for_event(self, event):
-        self.destroy_popup_for_event(event)
-        event.handled(event)
+            window = self._create_popup(event)
+            self._popups_ids[event.event_id] = window
+            self._popups.append([window, destroy_event_id])
+            self._arrange_notifications()
 
-    def button_press_event(self, window, gdk_event,  event):
-        self.noteo.invalidate_to_modules(event)
+    def replace_event(self, event_id, event):
+        with self._lock:
+            if event_id in self._popups_ids:
+                popup = self._popups_ids.pop(event_id)
+                for i in range(len(self._popups)):
+                    if self._popups[i][0] is popup:
+                        self.noteo.invalidate_event(self._popups[i][1])
+                        window = self._create_popup(event)
+                        destroy_event_id = self._popup_destroy_event(event.event_id, event.get_timeout())
+                        self._popups_ids[event.event_id] = window
+                        self._popups[i] = [window, destroy_event_id]
+                        break
+                popup.destroy()
+                self._arrange_notifications()
 
-    def create_popup(self, event):
+    def invalidate_event(self, event_id):
+        with self._lock:
+            if event_id in self._popups_ids:
+                popup = self._popups_ids.pop(event_id)
+                self._popups = [p for p in self._popups if p[0] is not popup]
+                popup.destroy()
+                self._arrange_notifications()
+
+    def _button_press_event(self, window, gdk_event,  event_id):
+        self.noteo.invalidate_event(event_id)
+
+    def _create_popup(self, event):
         summary = event.get_summary()
         content = event.get_content()
         icon = event.get_icon()
@@ -56,12 +81,12 @@ class Popup(NoteoModule):
 
         while re.findall(replace_amp, content):
             content = re.sub(replace_amp, "&amp;", content)
- 
+
         popup = gtk.Window(gtk.WINDOW_POPUP)
         max_chars = self.config['maxCharsPerLine']
         popup.set_opacity(self.config['opacity'])
         # Event signals
-        popup.connect("button_press_event", self.button_press_event, event)
+        popup.connect("button_press_event", self._button_press_event, event.event_id)
         popup.set_events(gtk.gdk.BUTTON_PRESS_MASK) # ) | gtk.gdk.POINTER_MOTION_MASK | gtk.gdk.POINTER_MOTION_HINT_MASK)
 
 
@@ -89,50 +114,47 @@ class Popup(NoteoModule):
 
         return popup
 
-    def destroy_popup_for_event(self, event):
-        sign = 1 if self.config['verticalArrangement'] == 'ascending' else -1
-        if event in self._popups:
-            popup = self._popups.pop(event)
-            w, h = popup.get_size()
-            popup.destroy()
-            for e,p in self._popups.items():
-                if e > event:
-                    x, y = p.get_position()
-                    p.move(x, y + (sign * h))
-            return True
-        else:
-            return False
 
-    def position_popup_for_event(self, event):
-        vertical_arrangement = self.config['verticalArrangement']
-        horizontal_arrangement = self.config['horizontalArrangement']
-        xoffset = self.config['xOffset']
-        yoffset = self.config['yOffset']
-        vertical_spacing = self.config['verticalSpacing']
-        width, height = self._popups[event].get_size()
-        self.noteo.logger.debug("Positioning window of size (%s, %s)" % (width, height))
-        popup_x, popup_y = xoffset, 0
-        if vertical_arrangement == 'descending':
-            greatest_height = yoffset - vertical_spacing
-            for e, p in self._popups.items():
-                w,h = p.get_size()
-                x, y = p.get_position()
-                if (e is not event) and y + h > greatest_height:
-                    greatest_height = y + h
-            popup_y = greatest_height + vertical_spacing
+    def _base_position(self):
+        v_arrange = self.config['verticalArrangement']
+        h_arrange = self.config['horizontalArrangement']
+        x_offset = self.config['xOffset']
+        y_offset = self.config['yOffset']
+        if v_arrange == 'TB':
+            y = y_offset
+        elif v_arrange == 'BT':
+            y = gtk.gdk.screen_height() - y_offset
         else:
-            smallest_height = gtk.gdk.screen_height() - yoffset + vertical_spacing
-            for e,p in self._popups.items():
-                x, y = p.get_position()
-                if (e is not event) and y < smallest_height:
-                    smallest_height = y
-            popup_y = smallest_height - height - vertical_spacing
-        if horizontal_arrangement == 'right':
-            popup_x = gtk.gdk.screen_width() - width - xoffset
-        self._popups[event].show_all()
-	self._popups[event].move(popup_x, popup_y)
-        self.noteo.gtk_update()
-               
-            
+            raise ValueError("vertical_arrangement must either be TB or BT")
+        if h_arrange == 'LR':
+            x = x_offset
+        elif h_arrange == 'RL':
+            x = gtk.gdk.screen_width() - x_offset
+        else:
+            raise ValueError("horizontalArrangement must either be LR or RL")
+        return (x, y)
+
+
+    def _arrange_notifications(self, start = 0):
+        height_sign = 1 if self.config['verticalArrangement'] == 'TB' else -1
+        add_height = 0 if self.config['verticalArrangement'] == 'TB' else -1
+        add_width = 1 if self.config['horizontalArrangement'] == 'LR' else -1
+        v_spacing = self.config['verticalSpacing']
+
+        x, y = self._base_position()
+        if start:
+            popup = self._popups[start][0]
+            _, y = popup.get_position()
+            _, h = popup.get_size()
+            y = y + (add_height * h)
+
+        for n in range(start, len(self._popups)):
+            popup = self._popups[n][0]
+            w, h = popup.get_size()
+            popup.move(x + (add_width * w),
+                       y + (add_height * h))
+            y = y + (height_sign * (h + v_spacing))
+
+
 
 module = Popup

@@ -109,20 +109,17 @@ class IMAPCheck(NoteoModule):
     from_line = '<b>From: %s</b>\n'
     subject_line = 'Subject: %s\n'
     def init(self):
-        self.update_event = RecurringFunctionCallEvent(self.noteo,
-                                                       self.check,
-                                                       2)
-        self.update_event.add_to_queue()
-        self.login_event = FunctionCallEvent(self.noteo,
-                                             1,
-                                             self.create_connections)
-        self.login_event.add_to_queue()
+        update_event = FunctionCallEvent(self.check)
+        update_event.recurring_delay = 2
+        self.noteo.add_event(update_event)
 
-        check_mail_menu_item = CreateMenuItemEvent(self.noteo,
-                                                   "Check mail now",
-                                                   self.check,
-                                                   icon='stock_mail')
-        check_mail_menu_item.add_to_queue()
+        self.noteo.add_event(FunctionCallEvent(self.create_connections))
+
+        #check_mail_menu_item = CreateMenuItemEvent(self.noteo,
+        #                                           "Check mail now",
+        #                                           self.check,
+        #                                           icon='stock_mail')
+        #check_mail_menu_item.add_to_queue()
 
     def decode(self, string, join=" ", max_items=0, max_len=0):
         decoded_header = decode_header(string)
@@ -189,13 +186,10 @@ class IMAPCheck(NoteoModule):
                 content += self.subject_line % escape(_subject)
                 content += "<i>%s</i>\n\n" % self.clean_text(message)
 
-            notification = NotificationEvent(self.noteo,
-                                             0,
-                                             summary,
-                                             content,
-                                             'mail_new',
-                                             timeout=self.config['notificationTimeout'])
-            notification.add_to_queue()
+            self.noteo.add_event(NotificationEvent(summary,
+                                                   content,
+                                                   'mail_new',
+                                                   timeout=self.config['notificationTimeout']))
         return True
 
     def create_connections(self):

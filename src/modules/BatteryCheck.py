@@ -27,18 +27,17 @@ class BatteryCheck(NoteoModule):
         self.find_percentage = re.compile(r'.+?([0-9]+?)\%.*?')
         self.is_discharging = re.compile(r'.*dis.*')
         self.find_time_left = re.compile(r'.+(\d\d:\d\d:\d\d).+')
-        self.check_event = RecurringFunctionCallEvent(self.noteo,
-                                                      self.check_battery,
-                                                      self.config['pollInterval']
-                                                      )
-        self.check_event.add_to_queue()
 
-        menu_item = CreateMenuItemEvent(self.noteo,
-                                        "Current battery status",
-                                        self.report_current_status,
-                                        icon='battery'
-                                        )
-        menu_item.add_to_queue()
+        check_event = FunctionCallEvent(self.check_battery)
+        check_event.recurring_delay = self.config['pollInterval']
+        self.noteo.add_event(check_event)
+
+        #menu_item = CreateMenuItemEvent(self.noteo,
+        #                                "Current battery status",
+        #                                self.report_current_status,
+        #                                icon='battery'
+        #                                )
+        #menu_item.add_to_queue()
 
     def get_status(self):
         percentage, charging = self.state
@@ -65,15 +64,10 @@ class BatteryCheck(NoteoModule):
         if time_left:
             message += "\n%s" % time_left
             message += (' until charged' if charging else ' remaining')
-        self.update_notification(NotificationEvent(self.noteo,
-                                                   0,
-                                                   summary,
-                                                   message,
-                                                   ('ac-adapter' if charging else 'battery'),
-                                                  ))
+        self.update_notification(NotificationEvent(summary, message, ('ac-adapter' if charging else 'battery')))
 
     def update_notification(self, event):
-        event.add_to_queue()
+        self.noteo.add_event(event)
 
 
     def check_battery(self):
@@ -81,12 +75,9 @@ class BatteryCheck(NoteoModule):
         percentage, charging, time_left = self.get_status()
         if self.state[1] is not None and \
            charging != self.state[1]: #Changed charging state
-            self.update_notification(NotificationEvent(self.noteo,
-                                                       0,
-                                                       "AC Power",
+            self.update_notification(NotificationEvent("AC Power",
                                                        "AC power has been plugged %s" % ("in" if charging else "off"),
-                                                       ('ac-adapter' if charging else 'battery'),
-                                                      ))
+                                                       ('ac-adapter' if charging else 'battery')))
 
         if charging:
             self.notified_low = False
@@ -97,21 +88,15 @@ class BatteryCheck(NoteoModule):
             if percentage < self.config['criticalPercentage'] \
                     and not self.notified_critical:
                 self.notified_critical = True
-                self.update_notification(NotificationEvent(self.noteo,
-                                                 0,
-                                                 "Battery Critical",
-                                                 "Battery charge is only %s%%" % percentage,
-                                                 'battery'
-                                                 ))
+                self.update_notification(NotificationEvent("Battery Critical",
+                                                           "Battery charge is only %s%%" % percentage,
+                                                           'battery'))
             elif percentage < self.config['lowPercentage'] \
                     and not self.notified_low:
                 self.notified_low = True
-                self.update_notification(NotificationEvent(self.noteo,
-                                                 0,
-                                                 "Battery Low",
-                                                 "Battery charge is at %s%%" % percentage,
-                                                 'battery'
-                                                 ))
+                self.update_notification(NotificationEvent("Battery Low",
+                                                           "Battery charge is at %s%%" % percentage,
+                                                           'battery'))
 
         if percentage != self.state[0] and \
            self.config['fibonacciNotify'] and \

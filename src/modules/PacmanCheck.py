@@ -11,11 +11,9 @@ class PacmanCheck(NoteoModule):
     def init(self):
         self._last_count = 0
         self._reminder = 0
-        self.check_event = RecurringFunctionCallEvent(self.noteo,
-                                                      self.check,
-                                                      self.config['pollInterval']
-                                                      )
-        self.check_event.add_to_queue()
+        check_event = FunctionCallEvent(self.check)
+        check_event.recurring_delay = self.config['pollInterval']
+        self.noteo.add_event(check_event)
 
     def check(self):
         status = commands.getoutput('pacman -Qu').split('\n')
@@ -29,13 +27,7 @@ class PacmanCheck(NoteoModule):
                    ('s' if plural else ''),
                    ('' if plural else 's')
                )
-               notification = NotificationEvent(self.noteo,
-                                                0,
-                                                summary,
-                                                message,
-                                                'system',
-                                               )
-               notification.add_to_queue()
+               self.noteo.add_event(NotificationEvent(summary, message, 'system'))
                self._reminder = self.config['iterationsBeforeReminder'] + 1
         self._reminder -= 1
         self._last_count = len(status)

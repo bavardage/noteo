@@ -4,7 +4,7 @@ from Noteo import *
 
 class MPD(NoteoModule):
     config_spec = { 
-	'host': 'string(default=localhost)',
+        'host': 'string(default=localhost)',
         'port': 'integer(default=6600)',
         'pollInterval': 'float(default=2.5)',
         'timeBetweenReconnectionAttempts': 'integer(default=30)',
@@ -14,7 +14,8 @@ class MPD(NoteoModule):
         self.client = mpd.MPDClient()
         self.lastsong = None
         self.playing = None
-        self._popup = None
+        self._event_id = None
+        self._notification_id = None
         try:
             self.client.connect(self.config['host'], self.config['port'])
             self.lastsong = self.client.currentsong()
@@ -22,36 +23,39 @@ class MPD(NoteoModule):
         except:
             self.noteo.logger.error("Couldn't connect to mpd on %s:%s" % 
                              (self.config['host'], self.config['port']))
-        self.update_event = RecurringFunctionCallEvent(self.noteo, 
-                                                       self.update, 
-                                                       self.config['pollInterval']
-                                                       )
-        self.update_event.add_to_queue()
-        notify_current_song_menu_item = CreateMenuItemEvent(self.noteo,
-                                                            "Show current song",
-                                                            self.notify_current_song,
-                                                            icon='audio-x-generic'
-                                                            )
-        notify_current_song_menu_item.add_to_queue()
+        event = FunctionCallEvent(self.update)
+        event.recurring_delay = self.config['pollInterval']
+        self._update_recurring_event(event)
+
+        #notify_current_song_menu_item = CreateMenuItemEvent(self.noteo,
+        #                                                    "Show current song",
+        #                                                    self.notify_current_song,
+        #                                                    icon='audio-x-generic'
+        #                                                    )
+        #notify_current_song_menu_item.add_to_queue()
+
+    def _update_notification(self, notification):
+        if self._notification_id is not None:
+            self.noteo.replace_event(self._notification_id, notification)
+        else:
+            self.noteo.add_event(notification)
+        self._notification_id = notification.event_id
+
+    def _update_recurring_event(self, event):
+        if self._event_id is not None:
+            self.noteo.invalidate_event(self._event_id)
+        self.noteo.add_event(event)
+        self._event_id = event
 
     def notify_current_song(self, song):
-        if self._popup is not None:
-            self.noteo.invalidate_to_modules(self._popup)
         summary = '<b>Playing</b>'
         content = '\n'.join([song[key] for key in ('title', 'artist', 'album') if key in song])
-
-        notification = NotificationEvent(self.noteo, 0, summary, content, "audio-x-generic")
-        self._popup = notification
-        notification.add_to_queue()
+        self._update_notification(NotificationEvent(summary, content, "audio-x-generic"))
 
     def notify_stop(self):
-        if self._popup is not None:
-            self.noteo.invalidate_to_modules(self._popup)
         summary = '<b>Paused playback</b>'
         content = ''
-        notification = NotificationEvent(self.noteo, 0, summary, content, "audio-x-generic")
-        self._popup = notification
-        notification.add_to_queue()
+        self._update_notification(NotificationEvent(summary, content, "audio-x-generic"))
 
     def update(self):
         try:
@@ -59,11 +63,9 @@ class MPD(NoteoModule):
             playing = (self.client.status()['state'] == 'play')
         except:
             self.noteo.logger.error("Connection to mpd was lost")
-            self.reconnect_event = RecurringFunctionCallEvent(self.noteo,
-                                                              self.reconnect,
-                                                              self.config['timeBetweenReconnectionAttempts'],
-                                                              )
-            self.reconnect_event.add_to_queue()
+            event = FunctionCallEvent(self.reconnect)
+            event.recurring_delay = self.config['timeBetweenReconnectionAttempts']
+            self._update_recurring_event(event)
             return False
         if self.playing != playing:
             if playing:
@@ -84,8 +86,9 @@ class MPD(NoteoModule):
         try:
             self.client.connect(self.config['host'], self.config['port'])
             self.noteo.debug("Reconnected to MPD")
-            self.update_event = RecurringFunctionCallEvent(self.noteo, self.upate, self.config['pollInterval'])
-            self.update_event.add_to_queue()
+            event = FunctionCallEvent(self.update)
+            event.recurring_delay = self.config['pollInterval']
+            self._update_recurring_event(event)
             return False
         except:
             return True #try again

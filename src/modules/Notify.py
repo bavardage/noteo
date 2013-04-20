@@ -10,31 +10,36 @@ import sys
 from Noteo import *
 
 class Notify(NoteoModule):
-    last_id = 0
     config_spec = {
         'defaultTimeout': 'float(default=7.0)',
         }
     def init(self):
         self.noteo.gtk_required()
-        self._notifications = {}
+
+        self._last_id = 0
+        self._lock = threading.RLock()
+
+        self._event_id = {}
+        self._notification_id = {}
+
         self.notification_daemon = NotificationDaemon(
             self,
             session_bus, 
             '/org/freedesktop/Notifications'
             )
 
-    def get_id(self):
-        self.last_id += 1
-        return self.last_id
+    def _notification_received(self, id=None, **kwargs):
+        with self._lock:
+            if id is not None and \
+               id in self._event_id:
+                self.noteo.logger.error("Received duplicate id")
+                return None
 
-    def notification_received(self, id=None, **kwargs):
-        if kwargs['replaces_id']:
-            return self.replace_notification(**kwargs)
-        else:
             if kwargs['expire'] == -1:
                 timeout = self.config['defaultTimeout']
             else:
                 timeout = kwargs['expire']/1000 #convert from millis to secs
+
             if 'icon_data' in kwargs['hints']:
                 icon_data = kwargs['hints']['icon_data']
                 (width, height, rowstride, has_alpha,
@@ -57,41 +62,44 @@ class Notify(NoteoModule):
                         )
             else:
                 icon = kwargs['icon']
-            notification = NotificationEvent(
-                self.noteo,
-                0,
-                kwargs['summary'],
-                kwargs['content'],
-                icon,
-                timeout,
-                handled=self.popup_destroyed
-                )
-            self._notifications[notification] = (id if id is not None else self.get_id())
-            notification.add_to_queue()
-            return self._notifications[notification]
 
-    def replace_notification(self, **kwargs):
-        found = None
-        for k,i in self._notifications.items():
-            if i == kwargs['replaces_id']:
-                found = k
-        if found is not None:
-            self.noteo.invalidate_to_modules(found)
-            del self._notifications[found]
-        ri = kwargs['replaces_id']
-        kwargs['replaces_id'] = 0
-        return self.notification_received(id=ri, **kwargs)
-    
-    def popup_destroyed(self, event, handlers=None):
-        if event in self._notifications:
-            i = self._notifications[event]
-            self.notification_daemon.NotificationClosed(i, 4)
-            del self._notifications[event]
-            #4 is undefined reason for closure
-            #TODO: Do better
+            notification = NotificationEvent(kwargs['summary'], kwargs['content'], icon, timeout)
+
+            if kwargs['replaces_id']:
+                self._replace_notification(kwargs['replaces_id'], notification)
+            else:
+                self.noteo.add_event(notification)
+
+            if id is None:
+                id = self._get_uid()
+            self._event_id[id] = notification.event_id
+            self._notification_id[notification.event_id] = id
+            return id
+
+    def _replace_notification(self, id, notification):
+        if id in self._event_id:
+            event_id = self._event_id.pop(id)
+            del self._notification_id[event_id]
+            self.noteo.replace_event(event_id, notification)
+        else:
+            self.noteo.add_event(notification)
+
+    def invalidate_event(self, event_id):
+        with self._lock:
+            if event_id in self._notification_id:
+                i = self._notification_id[event_id]
+                self.notification_daemon.NotificationClosed(i, 4)
+                id = self._notification_id.pop(event_id)
+                del self._event_id[id]
+                #4 is undefined reason for closure
+
+    def _get_uid(self):
+        with self._lock:
+            self._last_id += 1
+            return self._last_id
 
 class NotificationDaemon(dbus.service.Object):
-    
+
     def __init__(self, notify, bus, name):
         self.notify = notify
         super(NotificationDaemon, self).__init__(bus, name)
@@ -104,7 +112,7 @@ class NotificationDaemon(dbus.service.Object):
                          out_signature='u',
                          byte_arrays=True)
     def Notify(self, app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout):
-        return self.notify.notification_received(
+        return self.notify._notification_received(
             app_name=app_name,
             replaces_id=replaces_id,
             icon=app_icon,
