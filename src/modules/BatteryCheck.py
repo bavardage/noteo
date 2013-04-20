@@ -16,7 +16,7 @@ class BatteryCheck(NoteoModule):
         }
     notified_low = False
     notified_critical = False
-    state = (100, None)
+    state = (None, None)
     def init(self):
         if self.config['lowPercentage'] < self.config['criticalPercentage']:
             self.noteo.logger.warning(
@@ -50,7 +50,8 @@ class BatteryCheck(NoteoModule):
         if self.config['trustAcpi']:
             charging = not self.is_discharging.match(status)
         else:
-            if percentage != new_percentage:
+            if percentage is not None and \
+               percentage != new_percentage:
                 charging = percentage < new_percentage
 
         if self.find_time_left.match(status):
