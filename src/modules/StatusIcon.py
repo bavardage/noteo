@@ -19,7 +19,6 @@ class StatusIcon(NoteoModule):
         self.menu.append(gtk.SeparatorMenuItem())
         self.menu.append(quit)
         self.menu.show_all()
-        print "asd"
 
     def show_menu(self, status, button, time):
         self.menu.popup(None, None, None, button, time)

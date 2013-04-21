@@ -33,7 +33,6 @@ class PopupItem(object):
 
     def _fade_popup(self):
         if self._fade_event is not None:
-            print "opacity down",threading.current_thread()
             self.window.set_opacity(self.window.get_opacity() - 0.01)
 
     def _create_fade_event(self, window, timeout):
@@ -103,7 +102,6 @@ class Popup(NoteoModule):
 
         self._popups[event.event_id] = item
         self._popup_queue[i] = event.event_id
-        print (self._popup_queue, self._popups.keys())
         item.add_events()
         self._arrange_notifications()
 
@@ -124,12 +122,10 @@ class Popup(NoteoModule):
     def _enter_notify_event(self, window, gdk_event, event_id):
         item = self._popups[event_id]
         item.invalidate_events()
-        print "opacity 1", threading.current_thread()
-        window.set_opacity(1)#self.config['opacity'])
+        window.set_opacity(1)
 
     def _motion_notify_event(self, window, gdk_event, event_id):
-        print "opacity 1", threading.current_thread()
-#        window.set_opacity(1)#self.config['opacity'])
+        window.set_opacity(1)
 
     def _button_press_event(self, window, gdk_event,  event_id):
         self.noteo.invalidate_event(event_id)

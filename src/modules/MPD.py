@@ -35,10 +35,8 @@ class MPD(NoteoModule):
             self._notification_id = None
 
     def _update_notification(self, notification):
-        print("asd")
         if self._notification_id is not None:
             self.noteo.replace_event(self._notification_id, notification)
-            print(notification)
         else:
             self.noteo.add_event(notification)
         self._notification_id = notification.event_id
