@@ -16,30 +16,27 @@ class DesktopDisplay(NoteoModule):
         self.init_gui()
         self.position_window()
 
-        menu_item = CreateMenuItemEvent(self.noteo,
-                                        "Re-show desktop display",
-                                        self.show_desktop_display,
-                                        icon='desktop'
-                                        )
-        menu_item.add_to_queue()
+        self.noteo.add_event(CreateMenuItemEvent("Re-show desktop display",
+                                                 self.show_desktop_display,
+                                                 icon='desktop'))
 
     def show_desktop_display(self):
         self.init_gui()
         self.position_window()
-                                 
+
 
     def init_gui(self):
         self.window = gtk.Window()
         self.window.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_DESKTOP)
         self.window.set_opacity(self.config['opacity'])
-        
+
         self.scrolled = scrolled = gtk.ScrolledWindow()
         scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
-        
+
         self.vbox = gtk.VBox(False)
 
         scrolled.add_with_viewport(self.vbox)
-        
+
         self.window.add(scrolled)
         self.window.show_all()
 
@@ -47,8 +44,8 @@ class DesktopDisplay(NoteoModule):
         self.window.resize(300, self.config['height'])
         x,y = (self.config['xOffset'], self.config['yOffset'])
         self.window.move(x, y)
-            
-    def do_handle_NotificationEvent(self, event):
+
+    def handle_NotificationEvent(self, event):
         summary = event.get_summary()
         message = event.get_content()
         icon = event.get_icon()
@@ -73,5 +70,5 @@ class DesktopDisplay(NoteoModule):
             adjustment.set_value(adjustment.upper)
         except:
             self.noteo.logger.debug("Couldn't scroll to bottom for some reason")
-        
+
 module = DesktopDisplay
