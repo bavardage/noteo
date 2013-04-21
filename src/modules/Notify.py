@@ -6,8 +6,9 @@ import dbus.mainloop.glib
 import gtk, gobject, gtk.gdk
 import time
 import sys
+import threading
 
-from Noteo import *
+from Noteo import NoteoModule
 
 class Notify(NoteoModule):
     config_spec = {
@@ -132,13 +133,12 @@ class NotificationDaemon(dbus.service.Object):
                          in_signature='', out_signature='ssss')
     def GetServerInformation(self):
         return ("Notification Daemon", "Noteo", "0", "0")
-    
+
     @dbus.service.signal("org.freedesktop.Notifications",
                          signature='uu')
     def NotificationClosed(self, id_in, reason_in):
         pass
 
-        
     @dbus.service.method("org.freedesktop.Notifications", in_signature='u', out_signature='')
     def CloseNotification(self, id):
         print "Close it omg"

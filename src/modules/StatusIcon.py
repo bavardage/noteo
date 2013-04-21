@@ -4,12 +4,13 @@ import sys
 from Noteo import *
 
 class StatusIcon(NoteoModule):
+    config_spec = {'icon': 'string(default="/usr/share/pixmaps/noteo.png")'}
     def init(self):
         #tell noteo we are using gtk
         self.noteo.gtk_required()
         #setup status icon
         self.status_icon = gtk.StatusIcon()
-        self.status_icon.set_from_file('/usr/share/pixmaps/noteo.png')
+        self.status_icon.set_from_file(self.config['icon'])
         self.status_icon.connect('popup_menu', self.show_menu)
         #basic menu items
         self.menu = gtk.Menu()
@@ -18,7 +19,8 @@ class StatusIcon(NoteoModule):
         self.menu.append(gtk.SeparatorMenuItem())
         self.menu.append(quit)
         self.menu.show_all()
-        
+        print "asd"
+
     def show_menu(self, status, button, time):
         self.menu.popup(None, None, None, button, time)
 
@@ -38,7 +40,8 @@ class StatusIcon(NoteoModule):
         self.menu.show_all()
 
     def quit(self, *args):
-        quit_event = QuitEvent(self.noteo, 1) #quit in one second
-        quit_event.add_to_queue()
+        pass
+#        quit_event = QuitEvent(self.noteo, 1) #quit in one second
+#        quit_event.add_to_queue()
     
 module = StatusIcon

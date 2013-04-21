@@ -115,11 +115,10 @@ class IMAPCheck(NoteoModule):
 
         self.noteo.add_event(FunctionCallEvent(self.create_connections))
 
-        #check_mail_menu_item = CreateMenuItemEvent(self.noteo,
-        #                                           "Check mail now",
-        #                                           self.check,
-        #                                           icon='stock_mail')
-        #check_mail_menu_item.add_to_queue()
+        self.noteo.add_event(CreateMenuItemEvent("Check mail now",
+                                                 self.check,
+                                                 icon='stock_mail')) #TODO: Add conditions to handle this
+
 
     def decode(self, string, join=" ", max_items=0, max_len=0):
         decoded_header = decode_header(string)

@@ -16,12 +16,15 @@
     You should have received a copy of the GNU General Public License
     along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
 '''
+import heapq
 import time
 import logging
 import os
 import sys
 import threading
+import uuid
 try:
+    import glib
     import gtk
     NO_GTK = False
 except:
@@ -77,138 +80,102 @@ def get_icon(icon, size=64):
         return None
 
 class Event(object):
-    def __init__(self, noteo, due_in):
-        self.noteo = noteo
-        self.time = time.time() + due_in
-        self.event_id = id(self)
+    def __init__(self, event_id=None):
+        if event_id is None:
+            event_id = uuid.uuid4()
+        self._event_id = event_id
+        self._callback = None
+        self.recurring_delay = -1
+        self.delay = 0
 
-    def add_to_queue(self):
-        self.noteo.add_event_to_queue(self)
+    def set_callback(self, fun, *args, **kargs):
+        self._callback = [fun, args, kargs]
 
-    def handle(self):
-        pass
 
-    def handled(self, event, handler=None):
-        pass
+    @property
+    def event_id(self):
+        return self._event_id
 
-    def should_handle(self):
-        return True
-    
+    def handled(self):
+        if self._callback is not None:
+            self._callback[0](self, *self._callback[1], **self._callback[2])
+
     #comparison
     def __lt__(self, other):
-        return self.time < other.time
+        return self.event_id < other.event_id
     def __le__(self, other):
-        return self.time <= other.time
+        return self.event_id <= other.event_id
     def __eq__(self, other):
-        return self.time == other.time
+        return self.event_id == other.event_id
     def __ne__(self, other):
-        return self.time != other.time
+        return self.event_id != other.event_id
     def __gt__(self, other):
-        return self.time > other.time
+        return self.event_id > other.event_id
     def __ge__(self, other):
-        return self.time >= other.time
+        return self.event_id >= other.event_id
     #representations
     def __repr__(self):
         return "%s %s" % (self.__class__.__name__, self.event_id)
 
+class NotificationEvent(Event):
+    def __init__(self, summary, content, icon="", timeout=-1, *args, **kargs):
+        self._summary = summary
+        self._content = content
+        self._icon = icon
+        self._timeout = timeout
+        super(NotificationEvent, self).__init__(*args, **kargs)
 
-class FunctionCallEvent(Event):
-    def __init__(self, noteo, due_in, function, *args, **kwargs):
+    def __repr__(self):
+        return '"%s" "%s" "%s"' % (self._summary, self._content, self._icon)
+
+    def get_summary(self):
+        return str(self._summary)
+
+    def get_content(self):
+        return str(self._content)
+
+    def get_icon(self, size=64):
+        return get_icon(self._icon, size)
+
+    def get_timeout(self):
+        return self._timeout
+
+
+class HandleableEvent(Event):
+    def __init__(self, *args, **kargs):
+        super(HandleableEvent, self).__init__(*args, **kargs)
+
+    def handle(self):
+        raise Exception("Handle not implemented")
+
+
+class FunctionCallEvent(HandleableEvent):
+    def __init__(self, function, *args, **kwargs):
         self.function = function
         self.args = args
         self.kwargs = kwargs
-        super(FunctionCallEvent, self).__init__(noteo, due_in)
+        super(FunctionCallEvent, self).__init__()
 
     def handle(self):
         return_value = None
         if callable(self.function):
             return_value = self.function(*self.args, **self.kwargs)
-        else:
-            self.noteo.logger.warning("Function was not callable")
-        self.handled(self)
         return return_value
 
-
-class NotificationEvent(Event):
-    def __init__(self, noteo, due_in, summary, content, icon="", timeout=-1, handled=None):
-        self.summary = summary
-        self.content = content
-        self.icon = icon
-        self.timeout = timeout
-        self.on_handled = handled
-        super(NotificationEvent, self).__init__(noteo, due_in)
-    
-    def handle(self):
-        self.noteo.send_to_modules(self)
-
-    def handled(self, event, handlers=None):
-        if callable(self.on_handled):
-            self.on_handled(event)
-
-    def __repr__(self):
-        return '"%s" "%s" "%s"' % (self.summary, self.content, self.icon)
-
-    def get_summary(self):
-        return str(self.summary)
-    
-    def get_content(self):
-        return str(self.content)
-
-    def get_icon(self, size=64):
-        return get_icon(self.icon, size)
-
-    def get_timeout(self):
-        return self.timeout
-
-class RecurringEvent(Event):
-    def __init__(self, noteo, recurring_event, interval):
-        self.event = recurring_event
-        self.event_handled = self.event.handled
-        self.event.handled = self.handled
-        self.interval = interval
-        super(RecurringEvent, self).__init__(noteo, 0)
-
-    def handle(self):
-        self.noteo.logger.debug("adding recurring event to queue")
-        self.event.time = time.time() + self.interval
-        self.noteo.add_event_to_queue(self.event)
-
-    def handled(self, event, handlers=None):
-        self.event_handled(self)
-        self.handle()
-
-class RecurringFunctionCallEvent(Event):
-    def __init__(self, noteo, function, interval):
-        self.function = function
-        self.interval = interval
-        super(RecurringFunctionCallEvent, self).__init__(noteo, interval)
-
-    def handle(self):
-        self.noteo.logger.debug("Calling recurring function")
-        return_value = None
-        if callable(self.function):
-            return_value = self.function()
-        if return_value:
-            self.time = time.time() + self.interval
-            self.noteo.add_event_to_queue(self)
-        return return_value
 
 class CreateMenuItemEvent(Event):
-    def __init__(self, noteo, label, callback, icon=None):
+    def __init__(self, label, callback, icon=None):
         self.label = label
         self.callback = callback
         self.icon = icon
-        super(CreateMenuItemEvent, self).__init__(noteo, 0)
-    
+        super(CreateMenuItemEvent, self).__init__()
+
     def get_icon(self, size=64):
         return get_icon(self.icon, size)
-    
-    def handle(self):
-        self.noteo.send_to_modules(self)
 
 class QuitEvent(Event):
-    def __init__(self, noteo, quit_in):
-        super(QuitEvent, self).__init__(noteo, quit_in)
+    def __init__(self):
+        super(QuitEvent, self).__init__()
 
     def handle(self):
         try:
@@ -239,84 +206,83 @@ class NoteoModule(object):
     def configure(self):
         config_path = os.path.join(self.noteo.config_dir, self.__class__.__name__)
         self.config = NoteoConfig(config_path, self.config_spec)
-        
+
     def handle_event(self, event):
         superclasses = event.__class__.mro()
-        def default_handle_event(event):
-            self.noteo.logger.info("Handling event %s with default handler" % event)
-            return_val = self.do_handle_event(event)
-            event.handled(event)
-            return return_val
         for supercls in superclasses:
             name = supercls.__name__
             if name == 'Event':
-                return default_handle_event(event)
+                return self.do_handle_event(event)
             elif hasattr(self, "handle_%s" % name):
                 return getattr(self, "handle_%s" % name)(event)
             elif hasattr(self, "do_handle_%s" % name):
-                return_val = getattr(self, "do_handle_%s" % name)(event)
-                event.handled(event)
-                return return_val
+                return getattr(self, "do_handle_%s" % name)(event)
         self.noteo.logger.error("Reached end of handle_event in %s, this probably shouldn't happen" % self.modulename)
         self.noteo.logger.error("Event had type: %s, mro of (%s)" % (event.__class__.__name__, event.__class__.mro()))
         return None
 
-    def do_handle_event(self, event):
+    def replace_event(self, event_id, event):
+        '''replace_event(event_id, event)
+        overload this when you want to do something with the event.'''
+        pass
+
+    def do_handle_event(self, event_id):
         '''do_handle_event(event)
         overload this when you want to do something with the event,
         but the event is handled straight away - you will usually want to
         do this. Overload handle_event when you want more control'''
         pass
-    
-    def event_is_invalid(self, event):
-        '''event_is_invalid(event)
+
+    def invalidate_event(self, event_id):
+        '''invalidate_event(event_id)
         this is called when an event is made invalid before it is due to be
         called. If the event doesn't exist, then this should gracefully do 
         nothing'''
         pass
 
-class EventQueue:
-    def __init__(self):
+class ThreadedEventQueue:
+    def __init__(self, callback, *args, **kargs):
         self._lock = threading.RLock()
-        self.queue = []
-    
-    def peek(self):
-        with self._lock:
-            try:
-                return self.queue[0]
-            except:
-                return False
+        self._condition = threading.Condition(self._lock)
+        self._queue = []
+        self._callback = [callback, args, kargs]
+        self._end = False
 
-    def pop(self):
+    def start_thread(self):
         with self._lock:
-            try:
-                item = self.queue[0]
-                self.remove(item)
-                return item
-            except:
-                return False
+            while not self._end:
+                if not len(self._queue):
+                    self._condition.wait()
+                elif self._queue[0][0] > time.time():
+                    self._condition.wait(self._queue[0][0] - time.time())
+                else:
+                    ev = heapq.heappop(self._queue)[1]
+                    self._callback[0](ev, *self._callback[1], **self._callback[2])
 
-    def push(self, item):
+    def replace(self, event_id, event):
         with self._lock:
-            self.queue.append(item)
-            self.queue.sort()
+            tmp = []
+            for x in self._queue:
+                if event_id == x[1].event_id:
+                    x[1] = event
+                    break
 
-    def extend(self, items):
+    def remove(self, event_id):
         with self._lock:
-            self.queue.extend(items)
-            self.queue.sort()
+            tmp = []
+            for x in self._queue:
+                if event_id != x[1].event_id:
+                    heapq.heappush(tmp, x)
+            self._queue = tmp
 
-    def remove(self, item):
+    def push(self, time, event):
         with self._lock:
-            self.queue.remove(item)
-            self.queue.sort()
+            heapq.heappush(self._queue, [time, event])
+            self._condition.notify()
 
     def __repr__(self):
         with self._lock:
-            output = []
-            for e in self.queue:
-                output.append(str(time.time() - e.time))
-            return ", ".join(output)
+            return str(self._queue)
 
 class Noteo:
     logger = logging
@@ -331,11 +297,11 @@ class Noteo:
     local_module_dir = os.path.expandvars('$HOME/.noteo')
     module_dir = '/usr/share/noteo/modules/'
     config_dir = os.path.expandvars('$HOME/.config/noteo')
+
     def __init__(self, load_modules = True):
+        self._event_queue = ThreadedEventQueue(self._handle_event)
+
         self._configure()
-        self._event_queue = EventQueue()
-        self._handled_events = {}
-        self._to_add_to_queue = []
         self._modules = []
         if load_modules:
             self._load_modules()
@@ -378,83 +344,69 @@ class Noteo:
             module = __import__(module_name).module(self, path)
             self._modules.append(module)
         except:
-            self.logger.error("Errors occured when importing the module %s"
-                      % module_name)
+            self.logger.error("Errors occured when importing the module %s" % module_name)
             self.logger.error("The error were: %s" % str(sys.exc_info()))
             #raise
         finally:
             sys.path.pop()
 
-    #events
-    def add_event_to_queue(self, event):
-        self._event_queue.push(event)
-
-    def add_events_to_queue(self, events):
-        self._event_queue.extend(events)
-
-    def event_handled(self, event):
-        self.logger.info("Event(%s) handled" % event)
-        if event in self._handled_events:
-            self._handled_events[event][1] -= 1
-            if self._handled_events[event][1] <= 0:
-                self._handled_events[event][0](event)
-                del self._handled_events[event]
+    def _handle_event(self, event):
+        self.logger.debug("handling event (%s)" % event)
+        if isinstance(event, HandleableEvent):
+            event.handle()
         else:
-            self.logger.error("Event was not in _handled_events")
+            for module in self._modules:
+                module.handle_event(event)
+        event.handled()
+        if event.recurring_delay >= 0:
+            self._event_queue.push(time.time() + event.recurring_delay, event)
 
-    def send_to_modules(self, event):
-        self.logger.debug("Sending event(%s) to modules" % event)
-        handled = event.handled
-        def new_handled(event):
-            self.event_handled(event)
-        event.handled = new_handled
-        self._handled_events[event] = [handled, len(self._modules)]
+    def start(self):
+        self._event_queue.start_thread()
+
+    #events
+    def add_event(self, event):
+        self._event_queue.push(time.time() + event.delay, event)
+
+    def invalidate_event(self, event_id):
+        self.logger.debug("invalidating event (%s)" % event_id)
+        self._event_queue.remove(event_id)
+        self.add_event(FunctionCallEvent(self._invalidate_to_modules, event_id))
+
+    def _invalidate_to_modules(self, event_id):
+        self.logger.debug("invalidating event to modules (%s)" % event_id)
         for module in self._modules:
-            module.handle_event(event)
+            module.invalidate_event(event_id)
 
-    def invalidate_to_modules(self, event):
+    def replace_event(self, event_id, event):
+        self.logger.debug("replacing event (%s)" % event_id)
+        self._event_queue.replace(event_id, event)
+        self.add_event(FunctionCallEvent(self._replace_to_modules, event_id, event))
+
+    def _replace_to_modules(self, event_id, event):
+        self.logger.debug("replacing event to modules (%s)" % event_id)
         for module in self._modules:
-            module.event_is_invalid(event)
+            module.replace_event(event_id, event)
 
-    def handle_event(self, event):
-        self.logger.debug("in handle_event for event(%s)" % event)
-        event.handle()
-
-    def event_loop(self):
-        while True:
-            eq = self._event_queue
-            self.logger.debug("Entering event_loop")
-            while eq.peek() and eq.peek().time <= time.time():
-                self.handle_event(eq.pop())
-            if not eq.peek():
-                self.logger.warning("No events to handle - exiting")
-                return
-            else:
-                wait_time = eq.peek().time - time.time()
-                if wait_time > 0:
-                    self.logger.info("Sleeping for %.3f" % wait_time)
-                    time.sleep(wait_time)
-    
     def gtk_required(self):
         self.logger.debug("GTK is required")
         self.logger.debug("Already required? %s" % self.gtk_is_required)
+        gtk.gdk.threads_init()
         if NO_GTK:
             self.logger.warning("pygtk is not installed, therefore no gtk support")
             return
         if not self.gtk_is_required:
             self.logger.debug("Not already set-up. Setting up...")
-            event = RecurringFunctionCallEvent(
-                self,
-                self.gtk_update,
-                0.1)
-            self.add_event_to_queue(event)
+            event = FunctionCallEvent(self.gtk_update)
+            event.recurring_delay = 0.01
+            self.add_event(event)
         self.gtk_is_required = True
 
     def gtk_update(self):
         while gtk.events_pending():
             gtk.main_iteration()
         return True
-    
+
     def qt_required(self):
         self.logger.debug("QT4 is required")
         self.logger.debug("Already required? %s" % self.qt_is_required)
@@ -464,30 +416,25 @@ class Noteo:
         if not self.qt_is_required:
             self.logger.debug("Not already set-up. Setting up...")    
             self.qt_app = QtGui.QApplication(sys.argv)
-            event = RecurringFunctionCallEvent(
-                self,
-                self.qt_update,
-                0.1)
-            self.add_event_to_queue(event)
+            event = FunctionCallEvent(self.qt_update)
+            event.recurring_delay = 0.1
+            self.add_event(event)
         self.qt_is_required = True
 
     def qt_update(self):
         QtGui.qApp.processEvents()
         return True
-        
 
 def run_noteo():
     print "running noteo..."
     noteo = Noteo()
     try:
-        noteo.event_loop()
+        noteo.start()
     except KeyboardInterrupt:
         print "Keyboard Interrupt"
-        quit_event = QuitEvent(noteo, 0)
-        noteo.add_event_to_queue(quit_event)
-        noteo.event_loop()
+        noteo._handle_event(QuitEvent())
     print "...exiting noteo"
-    
+
 
 
 if __name__ == '__main__':

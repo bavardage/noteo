@@ -32,12 +32,9 @@ class BatteryCheck(NoteoModule):
         check_event.recurring_delay = self.config['pollInterval']
         self.noteo.add_event(check_event)
 
-        #menu_item = CreateMenuItemEvent(self.noteo,
-        #                                "Current battery status",
-        #                                self.report_current_status,
-        #                                icon='battery'
-        #                                )
-        #menu_item.add_to_queue()
+        self.noteo.add_event(CreateMenuItemEvent("Current battery status",
+                                                 self.report_current_status,
+                                                 icon='battery'))
 
     def get_status(self):
         percentage, charging = self.state
@@ -46,6 +43,9 @@ class BatteryCheck(NoteoModule):
 
         if self.find_percentage.match(status):
             new_percentage = int(self.find_percentage.match(status).groups()[0])
+        else:
+            new_percentage = percentage
+
         if self.config['trustAcpi']:
             charging = not self.is_discharging.match(status)
         else:
