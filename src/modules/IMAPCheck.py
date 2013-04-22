@@ -106,7 +106,7 @@ class IMAPCheck(NoteoModule):
     connections = None
 
     header_line = '<span size=\"large\"><b>You have <span foreground=\"red\">%d</span> new message%s (%s@%s)</b></span>\n'
-    from_line = '<b>From: %s</b>\n'
+    from_line = '<span size=\"large\"><b>From: %s</b></span>\n'
     subject_line = 'Subject: %s\n'
     def init(self):
         update_event = FunctionCallEvent(self.check)
@@ -121,7 +121,7 @@ class IMAPCheck(NoteoModule):
 
 
     def decode(self, string, join=" ", max_items=0, max_len=0):
-        decoded_header = decode_header(string)
+        decoded_header = decode_header(string.strip())
 
         content = []
         for line in decoded_header:
@@ -137,10 +137,9 @@ class IMAPCheck(NoteoModule):
             content.append(tmp)
         return join.join(content)
 
-    def clean_text(self, message):
+    def get_content(self, message):
         if self.config['linesOfContent'] == 0:
             return ""
-        content = ""
         text = ""
         for part in message.walk():
             if part.get_content_type() == "text/plain":
@@ -150,16 +149,17 @@ class IMAPCheck(NoteoModule):
             elif part.get_content_type() == "text/html":
                 text = part.get_payload(decode=True)
                 text = text.decode(part.get_content_charset('utf-8'))
-                text = re.sub('<[^<]+?>', '', text)
-                text = re.sub('&[^;]*;', '', text)
-                break
-
-
         text = text.replace('\r', '\n')
         text = [x.strip() for x in text.split('\n') if len(x.strip())]
         if len(text) > self.config['linesOfContent']:
             text = text [:self.config['linesOfContent']]
-        return "\n".join(text)
+        text = "\n".join(text)
+        text = re.sub('<[^<]+?>', '', text)
+        text = re.sub('&[^;]*;', '', text)
+        text = re.sub('<', '', text)
+        text = re.sub('>', '', text)
+        text = re.sub('&', '', text)
+        return text
 
     def check(self):
         self.noteo.logger.debug("Checking mail...")
@@ -183,7 +183,7 @@ class IMAPCheck(NoteoModule):
 
                 content += self.from_line % escape(_from[0])
                 content += self.subject_line % escape(_subject)
-                content += "<i>%s</i>\n\n" % self.clean_text(message)
+                content += "<i>%s</i>\n\n" % escape(self.get_content(message))
 
             self.noteo.add_event(NotificationEvent(summary,
                                                    content,
