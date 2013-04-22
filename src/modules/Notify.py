@@ -8,7 +8,7 @@ import time
 import sys
 import threading
 
-from Noteo import NoteoModule
+from Noteo import *
 
 class Notify(NoteoModule):
     config_spec = {
@@ -104,7 +104,7 @@ class NotificationDaemon(dbus.service.Object):
     def __init__(self, notify, bus, name):
         self.notify = notify
         super(NotificationDaemon, self).__init__(bus, name)
-    
+
     def set_session_bus(self, session_bus):
         self.session_bus = session_bus
 
