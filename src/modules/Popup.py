@@ -76,7 +76,6 @@ class PopupItem(object):
         event = FunctionCallEvent(self._fade_popup)
         event.delay = self._delay
         event.recurring_delay = self._rec_delay
-        print(self._delay, self._rec_delay)
         self.noteo.add_event(event)
         return event.event_id
 
@@ -110,7 +109,6 @@ class Popup(NoteoModule):
         self._popup_queue = []
 
     def _get_timeout(self, timeout):
-        print(timeout)
         if timeout <= 0:
             return self.config['defaultTimeout']
         return timeout
