@@ -317,6 +317,8 @@ class Noteo:
             'localmodules': 'list(default=list(\'\'))',
             'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup, PacmanCheck, DesktopDisplay))',
             'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
+            'qt_recurring_delay': 'float(default=0.1)',
+            'gtk_recurring_delay': 'float(default=0.1)'
             }
         config_path = os.path.join(Noteo.config_dir, 'Noteo')
         self.config = NoteoConfig(config_path, config_spec)
@@ -388,6 +390,9 @@ class Noteo:
         for module in self._modules:
             module.replace_event(event_id, event)
 
+    def gtk_recurring_delay(self):
+        return self.config['gtk_recurring_delay']
+
     def gtk_required(self):
         self.logger.debug("GTK is required")
         self.logger.debug("Already required? %s" % self.gtk_is_required)
@@ -398,7 +403,7 @@ class Noteo:
         if not self.gtk_is_required:
             self.logger.debug("Not already set-up. Setting up...")
             event = FunctionCallEvent(self.gtk_update)
-            event.recurring_delay = 0.01
+            event.recurring_delay = self.gtk_recurring_delay()
             self.add_event(event)
         self.gtk_is_required = True
 
@@ -406,6 +411,9 @@ class Noteo:
         while gtk.events_pending():
             gtk.main_iteration()
         return True
+
+    def qt_recurring_delay(self):
+        return self.config['qt_recurring_delay']
 
     def qt_required(self):
         self.logger.debug("QT4 is required")
@@ -417,7 +425,7 @@ class Noteo:
             self.logger.debug("Not already set-up. Setting up...")    
             self.qt_app = QtGui.QApplication(sys.argv)
             event = FunctionCallEvent(self.qt_update)
-            event.recurring_delay = 0.1
+            event.recurring_delay = self.qt_recurring_delay()
             self.add_event(event)
         self.qt_is_required = True
 

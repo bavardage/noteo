@@ -14,11 +14,16 @@ class PopupItem(object):
 
         self.timeout = timeout #TODO: Implement access method
         self._delay = timeout - fade_time
-        self._fade_step = opacity / fade_steps
-        self._rec_delay = fade_time / fade_steps
-        if self._rec_delay < 0.025:
-            self._rec_delay = 0.025 #TODO: Noteo.gtk_update_rate
+        if self._delay < 0:
+            self._delay = 0
+            fade_time = timeout
 
+        self._rec_delay = fade_time / fade_steps
+        if self._rec_delay < self.noteo.gtk_recurring_delay():
+            self._rec_delay = self.noteo.gtk_recurring_delay()
+            fade_steps = fade_time / self._rec_delay
+
+        self._fade_step = opacity / fade_steps
 
         self._fade_event = None
         self._destroy_event = None
