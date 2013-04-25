@@ -16,21 +16,22 @@ class PacmanCheck(NoteoModule):
         self.noteo.add_event(check_event)
 
     def check(self):
-        status = commands.getoutput('pacman -Qu').split('\n')
+        status = commands.getoutput('pacman -Qu')
+        lines = status.count('\n') + 1
         if len(status):
-           if len(status) != self._last_count or \
+           if lines != self._last_count or \
               (self._reminder == 0 and self.config['iterationsBeforeReminder'] != 0):
                summary = 'System Updates'
-               plural  = (len(status) > 1)
+               plural  = (lines > 1)
                message = '%s package%s need%s updating' % (
-                   len(status),
+                   lines,
                    ('s' if plural else ''),
                    ('' if plural else 's')
                )
                self.noteo.add_event(NotificationEvent(summary, message, 'system'))
                self._reminder = self.config['iterationsBeforeReminder'] + 1
         self._reminder -= 1
-        self._last_count = len(status)
+        self._last_count = lines
         return True
 
 module = PacmanCheck
