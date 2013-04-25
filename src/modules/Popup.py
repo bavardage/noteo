@@ -5,18 +5,28 @@ import threading
 from Noteo import *
 
 class PopupItem(object):
-    def __init__(self, noteo, event_id, window, timeout):
-        self.event_id = event_id
+    def __init__(self, noteo, event_id, window, opacity, timeout, fade_time, fade_steps):
+        self._event_id = event_id
         self.noteo = noteo
-        self.window = window
-        self.timeout = timeout
+
+        self._opacity = opacity
+        self._set_window(window)
+
+        self.timeout = timeout #TODO: Implement access method
+        self._delay = timeout - fade_time
+        self._fade_step = opacity / fade_steps
+        self._rec_delay = fade_time / fade_steps
+        if self._rec_delay < 0.025:
+            self._rec_delay = 0.025 #TODO: Noteo.gtk_update_rate
+
+
         self._fade_event = None
         self._destroy_event = None
 
     def add_events(self):
         self.invalidate_events()
-        self._fade_event = self._create_fade_event(self.window, self.timeout)
-        self._destroy_event = self._create_destroy_event(self.event_id, self.timeout)
+        self._fade_event = self._create_fade_event()
+        self._destroy_event = self._create_destroy_event()
 
     def invalidate_events(self):
         if self._destroy_event is not None:
@@ -31,29 +41,57 @@ class PopupItem(object):
         self.window.destroy()
         self.invalidate_events()
 
+    def _leave_notify_event(self, window, gdk_event):
+        self.invalidate_events()
+        window.set_opacity(self._opacity)
+        self.add_events()
+
+    def _enter_notify_event(self, window, gdk_event):
+        self.invalidate_events()
+        window.set_opacity(1)
+
+    def _motion_notify_event(self, window, gdk_event):
+        window.set_opacity(1)
+
+    def _button_press_event(self, window, gdk_event):
+        self.noteo.invalidate_event(self._event_id)
+
+    def _set_window(self, window):
+        window.set_opacity(self._opacity)
+        # Event signals
+#        popup.connect("motion_notify_event", self._motion_notify_event, event.event_id)
+        window.connect("enter_notify_event", self._enter_notify_event)
+        window.connect("leave_notify_event", self._leave_notify_event)
+        window.connect("button_press_event", self._button_press_event)
+        window.set_events(gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK)# | gtk.gdk.MOTION_NOTIFY)
+        self.window = window
+        window.show_all()
+
+
     def _fade_popup(self):
         if self._fade_event is not None:
-            self.window.set_opacity(self.window.get_opacity() - 0.01)
+            self.window.set_opacity(self.window.get_opacity() - self._fade_step)
 
-    def _create_fade_event(self, window, timeout):
+    def _create_fade_event(self):
         event = FunctionCallEvent(self._fade_popup)
-        event.delay = 3 * timeout / 4
-        event.recurring_delay = timeout / 400 # TODO: option for number of steps
+        event.delay = self._delay
+        event.recurring_delay = self._rec_delay
+        print(self._delay, self._rec_delay)
         self.noteo.add_event(event)
         return event.event_id
 
-    def _create_destroy_event(self, event_id, timeout):
-        if timeout <= 0:
-            timeout = self.config['defaultTimeout']
+    def _create_destroy_event(self):
         event = FunctionCallEvent(self.noteo.invalidate_event,
-                                                event_id)
-        event.delay = timeout
+                                  self._event_id)
+        event.delay = self.timeout
         self.noteo.add_event(event)
         return event.event_id
 
 class Popup(NoteoModule):
     config_spec = {
         'defaultTimeout': 'float(default=5)',
+        'fadeTime': 'float(default=4)',
+        'fadeSteps': 'float(default=36)',
         'verticalArrangement': 'string(default=\'ascending\')',
         'horizontalArrangement': 'string(default=\'right\')',
         'opacity': 'float(default=0.8)',
@@ -72,6 +110,7 @@ class Popup(NoteoModule):
         self._popup_queue = []
 
     def _get_timeout(self, timeout):
+        print(timeout)
         if timeout <= 0:
             return self.config['defaultTimeout']
         return timeout
@@ -82,7 +121,10 @@ class Popup(NoteoModule):
         item =  PopupItem(self.noteo,
                           event_id,
                           self._create_popup(event),
-                          self._get_timeout(event.get_timeout()))
+                          self.config['opacity'],
+                          self._get_timeout(event.get_timeout()),
+                          self.config['fadeTime'],
+                          self.config['fadeSteps'])
 
         self._popups[event_id] = item
         self._popup_queue.append(event_id)
@@ -98,7 +140,10 @@ class Popup(NoteoModule):
         item =  PopupItem(self.noteo,
                           event.event_id,
                           self._create_popup(event),
-                          self._get_timeout(event.get_timeout()))
+                          self.config['opacity'],
+                          self._get_timeout(event.get_timeout()),
+                          self.config['fadeTime'],
+                          self.config['fadeSteps'])
 
         self._popups[event.event_id] = item
         self._popup_queue[i] = event.event_id
@@ -112,23 +157,6 @@ class Popup(NoteoModule):
         self._popup_queue = [id for id in self._popup_queue if id != event_id]
         popup.destroy()
         self._arrange_notifications()
-
-    def _leave_notify_event(self, window, gdk_event, event_id):
-        item = self._popups[event_id]
-        item.invalidate_events()
-        window.set_opacity(self.config['opacity'])
-        item.add_events()
-
-    def _enter_notify_event(self, window, gdk_event, event_id):
-        item = self._popups[event_id]
-        item.invalidate_events()
-        window.set_opacity(1)
-
-    def _motion_notify_event(self, window, gdk_event, event_id):
-        window.set_opacity(1)
-
-    def _button_press_event(self, window, gdk_event,  event_id):
-        self.noteo.invalidate_event(event_id)
 
     def _create_popup(self, event):
         summary = event.get_summary()
@@ -144,15 +172,6 @@ class Popup(NoteoModule):
             content = re.sub(replace_amp, "&amp;", content)
 
         popup = gtk.Window(gtk.WINDOW_POPUP)
-        max_chars = self.config['maxCharsPerLine']
-        popup.set_opacity(self.config['opacity'])
-        # Event signals
-#        popup.connect("motion_notify_event", self._motion_notify_event, event.event_id)
-        popup.connect("enter_notify_event", self._enter_notify_event, event.event_id)
-        popup.connect("leave_notify_event", self._leave_notify_event, event.event_id)
-        popup.connect("button_press_event", self._button_press_event, event.event_id)
-        popup.set_events(gtk.gdk.BUTTON_PRESS_MASK | gtk.gdk.ENTER_NOTIFY_MASK | gtk.gdk.LEAVE_NOTIFY_MASK)# | gtk.gdk.MOTION_NOTIFY)
-
 
         vbox = gtk.VBox()
         for item in (summary, content):
@@ -160,7 +179,7 @@ class Popup(NoteoModule):
             label.set_justify(gtk.JUSTIFY_CENTER)
             label.set_markup(item)
             label.set_line_wrap(True)
-            label.set_width_chars(max_chars)
+            label.set_width_chars(self.config['maxCharsPerLine'])
             label.show()
             if self.config['use-custom-colours']:
                 label.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(self.config['fg-colour']))
@@ -174,7 +193,6 @@ class Popup(NoteoModule):
             popup.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(self.config['bg-colour']))
 
         popup.add(hbox)
-        popup.show_all()
 
         return popup
 

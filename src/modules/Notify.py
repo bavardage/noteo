@@ -39,7 +39,7 @@ class Notify(NoteoModule):
             if kwargs['expire'] == -1:
                 timeout = self.config['defaultTimeout']
             else:
-                timeout = kwargs['expire']/1000 #convert from millis to secs
+                timeout = kwargs['expire']/1000.0 #convert from millis to secs
 
             if 'icon_data' in kwargs['hints']:
                 icon_data = kwargs['hints']['icon_data']
