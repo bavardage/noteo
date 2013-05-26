@@ -1,22 +1,37 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
-pkgname=noteo
-pkgver=0.1.6
+pkgname=noteo-fork-git
+pkgver=116.796c9eb
 pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
 url="http://code.google.com/p/noteo/"
 license=("GPL")
-depends=("pygtk" "python-configobj")
+makedepends=("git")
+depends=("pygtk")
 optdepends=('xmms2: xmms monitoring'
             'mpd: mpd monitoring'
-            'libgmail: gmail checking'
             'libnotify: libnotify support')
 provides=("notification-daemon")
 replaces=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
 conflicts=("noteo-notify" "noteo-awesome" "noteo-batterystatus" "noteo-gmailcheck" "noteo-mpd" "noteo-pacmanstatus" "noteo-output-macopix<=0.0.6")
-source=("http://noteo.googlecode.com/files/${pkgname}-${pkgver}.tar.gz")
 
-build() {
-  cd $startdir/src/"$pkgname-$pkgver"
-  python setup.py install --prefix=/usr --root="$startdir/pkg"
+md5sums=("SKIP")
+branch="master"
+repo="https://github.com/npcardoso/noteo.git"
+source=("git+$repo")
+
+
+#pkgver() {
+#  export pkgver=123
+#  echo "asdasd"
+#  git ls-remote $repo|grep $branch | sed 's/\(^[a-z0-9]*\)[^a-z0-9].*$/\1/'
+#}
+pkgver() {
+  cd $startdir
+  echo $(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+}
+
+package() {
+  cd $startdir/src/noteo/src
+  python2 setup.py install --prefix="$pkgname/usr/" --root="$startdir/pkg"
 }
