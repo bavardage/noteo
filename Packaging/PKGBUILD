@@ -1,6 +1,6 @@
 # Contributor: Ben Duffield <jebavarde<AT>gmail.com>
 pkgname=noteo-fork-git
-pkgver=116.796c9eb
+pkgver=1
 pkgrel=1
 arch=("i686" "x86_64")
 pkgdesc="A notifications system"
@@ -20,12 +20,6 @@ branch="master"
 repo="https://github.com/npcardoso/noteo.git"
 source=("git+$repo")
 
-
-#pkgver() {
-#  export pkgver=123
-#  echo "asdasd"
-#  git ls-remote $repo|grep $branch | sed 's/\(^[a-z0-9]*\)[^a-z0-9].*$/\1/'
-#}
 pkgver() {
   cd $startdir
   echo $(git rev-list --count HEAD).$(git rev-parse --short HEAD)
