@@ -80,7 +80,7 @@ class MailTracker:
                     conn.close()
                     conn.logout()
                     break
-                except imaplib.IMAP4.error as e:
+                except BaseException as e:
                     print("Error mail", e)
 
             time.sleep(self.interval)

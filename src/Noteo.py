@@ -315,7 +315,7 @@ class Noteo:
             pass
         config_spec = {
             'localmodules': 'list(default=list(\'\'))',
-            'modules': 'list(default=list(BatteryCheck, Dmesg, Awesome, GmailCheck, Xmms2, MPD, DirectoryWatcher, StatusIcon, Notify, Popup, PacmanCheck, DesktopDisplay))',
+            'modules': 'list(default=list(BatteryCheck, Dmesg, Xmms2, MPD, StatusIcon, Notify, Popup, PacmanCheck, DesktopDisplay))',
             'debugLevel': 'integer(default=30)', #logger.WARNING = 30 
             'qt_recurring_delay': 'float(default=0.1)',
             'gtk_recurring_delay': 'float(default=0.1)'
